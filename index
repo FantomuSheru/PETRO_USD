@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Lubricantes</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 15px;
+      margin: 10px;
+      display: inline-block;
+      width: 250px;
+    }
+    .alerta {
+      font-size: 22px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>📊 Dashboard Mercado Lubricantes</h1>
+
+<div class="card">
+  <h2>🛢️ Brent</h2>
+  <p id="brent">Cargando...</p>
+</div>
+
+<div class="card">
+  <h2>💱 USD/MXN</h2>
+  <p id="usd">Cargando...</p>
+</div>
+
+<div class="alerta" id="alerta">Analizando...</div>
+
+<canvas id="grafica" width="400" height="200"></canvas>
+
+<script>
+async function obtenerDatos() {
+
+  // ⚠️ APIs gratis (puedes cambiarlas después)
+  const brentRes = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=oil-brent&vs_currencies=usd");
+  const brentData = await brentRes.json();
+
+  const usdRes = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+  const usdData = await usdRes.json();
+
+  let brent = brentData["oil-brent"]?.usd || 80;
+  let usd = usdData.rates.MXN;
+
+  document.getElementById("brent").innerText = "$" + brent;
+  document.getElementById("usd").innerText = usd;
+
+  // 🔢 Simulación de histórico (luego puedes hacerlo real)
+  let brent7 = brent * 0.93;
+  let usd7 = usd * 0.97;
+
+  let brentChange = ((brent - brent7) / brent7) * 100;
+  let usdChange = ((usd - usd7) / usd7) * 100;
+
+  // 🧠 Índice
+  let indice = (brentChange * 0.6) + (usdChange * 0.4);
+
+  let alerta = "🟢 Estable";
+
+  if (indice > 6) alerta = "🔴 Alza inminente";
+  else if (indice > 3) alerta = "🟠 Posible alza";
+
+  document.getElementById("alerta").innerText = alerta;
+
+  // 📊 Gráfica
+  new Chart(document.getElementById("grafica"), {
+    type: 'line',
+    data: {
+      labels: ["Hace 7 días", "Hoy"],
+      datasets: [
+        { label: "Brent", data: [brent7, brent] },
+        { label: "USD/MXN", data: [usd7, usd] }
+      ]
+    }
+  });
+}
+
+obtenerDatos();
+</script>
+
+</body>
+</html>
