@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Energía</title>
+<title>Monitor Lubricantes</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -11,10 +11,6 @@ body {
   background: #0f172a;
   color: white;
   text-align: center;
-}
-
-h1 {
-  margin-top: 20px;
 }
 
 .container {
@@ -26,44 +22,53 @@ h1 {
 .card {
   background: #1e293b;
   padding: 20px;
-  margin: 15px;
+  margin: 10px;
   border-radius: 12px;
-  width: 250px;
-  font-size: 20px;
+  width: 220px;
 }
 
-#senal {
-  margin-top: 20px;
-  font-size: 28px;
+.value {
+  font-size: 24px;
   font-weight: bold;
 }
 
-canvas {
-  max-width: 900px;
-  margin-top: 30px;
+#senal {
+  font-size: 28px;
+  margin-top: 20px;
+  font-weight: bold;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📊 Dashboard Energía</h1>
+<h1>🛢️ Monitor de Lubricantes</h1>
 
 <div class="container">
 
   <div class="card">
-    <h2>Brent 🛢️</h2>
-    <p id="brent">Cargando...</p>
+    <h3>Brent</h3>
+    <div id="brent" class="value">...</div>
   </div>
 
   <div class="card">
-    <h2>USD/MXN 💵</h2>
-    <p id="usd">Cargando...</p>
+    <h3>USD/MXN</h3>
+    <div id="usd" class="value">...</div>
+  </div>
+
+  <div class="card">
+    <h3>Tendencia Brent</h3>
+    <div id="trendBrent" class="value">...</div>
+  </div>
+
+  <div class="card">
+    <h3>Tendencia USD</h3>
+    <div id="trendUsd" class="value">...</div>
   </div>
 
 </div>
 
-<h2 id="senal">Analizando...</h2>
+<div id="senal">Analizando mercado...</div>
 
 <canvas id="grafica"></canvas>
 
@@ -71,107 +76,96 @@ canvas {
 
 const API_URL = "https://petro-usd.vercel.app/api/brent";
 
-let historial = [];
-let etiquetas = [];
+let brentHist = [];
+let usdHist = [];
+let labels = [];
 
 async function obtenerDatos() {
   try {
 
-    // 🔹 Brent
     let res = await fetch(API_URL);
     let data = await res.json();
     let brent = data.brent;
 
-    document.getElementById("brent").innerText = "$" + brent;
+    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
 
-    // 🔹 USD/MXN
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
     let usd = usdData.rates.MXN;
 
     document.getElementById("usd").innerText = usd.toFixed(2);
 
-    // 📊 guardar histórico
-    let hora = new Date().toLocaleTimeString();
+    let time = new Date().toLocaleTimeString();
 
-    etiquetas.push(hora);
-    historial.push(brent);
+    labels.push(time);
+    brentHist.push(brent);
+    usdHist.push(usd);
 
-    if (historial.length > 15) {
-      historial.shift();
-      etiquetas.shift();
+    if (labels.length > 20) {
+      labels.shift();
+      brentHist.shift();
+      usdHist.shift();
     }
 
-    actualizarGrafica();
-
-    evaluarTendencia();
+    analizar();
 
   } catch (error) {
     console.error(error);
-
-    document.getElementById("brent").innerText = "Error";
-    document.getElementById("usd").innerText = "Error";
   }
 }
 
-// 🔴 lógica de negocio
-function evaluarTendencia() {
-  if (historial.length < 3) return;
+function calcularCambio(arr) {
+  if (arr.length < 5) return 0;
+  return ((arr[arr.length-1] - arr[arr.length-5]) / arr[arr.length-5]) * 100;
+}
 
-  let ultimos = historial.slice(-3);
-  let cambio = ultimos[2] - ultimos[0];
+function analizar() {
+  let cambioBrent = calcularCambio(brentHist);
+  let cambioUsd = calcularCambio(usdHist);
+
+  document.getElementById("trendBrent").innerText = cambioBrent.toFixed(2) + "%";
+  document.getElementById("trendUsd").innerText = cambioUsd.toFixed(2) + "%";
 
   let señal = document.getElementById("senal");
 
-  if (cambio > 0.5) {
-    señal.innerText = "🔴 SUBIR PRECIOS";
+  // 🔥 lógica enfocada a lubricantes
+  if (cambioBrent > 1 && cambioUsd > 0.5) {
+    señal.innerText = "🔴 SUBIDA INMINENTE DE LUBRICANTES";
     señal.style.color = "red";
-  } else if (cambio < -0.5) {
-    señal.innerText = "🟢 BAJANDO";
+  } 
+  else if (cambioBrent > 0.5) {
+    señal.innerText = "🟠 PRESIÓN POR CRUDO";
+    señal.style.color = "orange";
+  }
+  else if (cambioUsd > 0.5) {
+    señal.innerText = "🟠 PRESIÓN POR TIPO DE CAMBIO";
+    señal.style.color = "orange";
+  }
+  else if (cambioBrent < -1) {
+    señal.innerText = "🟢 POSIBLE BAJA DE COSTOS";
     señal.style.color = "green";
-  } else {
-    señal.innerText = "🟡 ESTABLE";
+  }
+  else {
+    señal.innerText = "🟡 MERCADO ESTABLE";
     señal.style.color = "yellow";
   }
 }
 
-// 📈 gráfica
+// gráfico
 const ctx = document.getElementById("grafica").getContext("2d");
 
-let chart = new Chart(ctx, {
+new Chart(ctx, {
   type: 'line',
   data: {
-    labels: etiquetas,
+    labels: labels,
     datasets: [{
-      label: 'Precio Brent',
-      data: historial
+      label: 'Brent',
+      data: brentHist
     }]
-  },
-  options: {
-    plugins: {
-      legend: {
-        labels: { color: "white" }
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: "white" }
-      },
-      y: {
-        ticks: { color: "white" }
-      }
-    }
   }
 });
 
-function actualizarGrafica() {
-  chart.update();
-}
-
-// 🔄 actualizar cada minuto
 setInterval(obtenerDatos, 60000);
-
-// 🚀 primera carga
 obtenerDatos();
 
 </script>
