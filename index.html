@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitor Energía PRO+</title>
+<title>Monitor Lubricantes PRO</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -33,16 +33,20 @@ body {
 }
 
 #senal {
-  font-size: 28px;
+  font-size: 26px;
   margin-top: 20px;
 }
 
+canvas {
+  max-width: 1000px;
+  margin-top: 30px;
+}
 </style>
 </head>
 
 <body>
 
-<h1>🛢️ Monitor Lubricantes PRO+</h1>
+<h1>🛢️ Monitor de varibales - lubricantes</h1>
 
 <div class="container">
 
@@ -68,7 +72,7 @@ body {
 
 </div>
 
-<div id="senal">Analizando mercado...</div>
+<div id="senal">Analizando...</div>
 
 <canvas id="grafica"></canvas>
 
@@ -78,15 +82,19 @@ const API_URL = "https://petro-usd.vercel.app/api/brent";
 
 let brentHist = [];
 let usdHist = [];
+let mezclaHist = [];
+let baseOilHist = [];
 let labels = [];
 
 async function obtenerDatos() {
   try {
 
+    // Brent
     let res = await fetch(API_URL);
     let data = await res.json();
     let brent = data.brent;
 
+    // USD
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
     let usd = usdData.rates.MXN;
@@ -94,12 +102,12 @@ async function obtenerDatos() {
     document.getElementById("brent").innerText = "$" + brent.toFixed(2);
     document.getElementById("usd").innerText = usd.toFixed(2);
 
-    // 🇲🇽 Mezcla mexicana estimada
+    // Mezcla MX (estimada)
     let mezcla = brent - 7;
     document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
 
-    // 📦 Base oil estimado
-    let baseOil = (brent * 0.75) * (usd / 17);
+    // Base Oil
+    let baseOil = (mezcla * 0.8) * (usd / 17.5);
     document.getElementById("baseoil").innerText = baseOil.toFixed(2);
 
     let time = new Date().toLocaleTimeString();
@@ -107,56 +115,46 @@ async function obtenerDatos() {
     labels.push(time);
     brentHist.push(brent);
     usdHist.push(usd);
+    mezclaHist.push(mezcla);
+    baseOilHist.push(baseOil);
 
     if (labels.length > 25) {
       labels.shift();
       brentHist.shift();
       usdHist.shift();
+      mezclaHist.shift();
+      baseOilHist.shift();
     }
 
     analizar();
-    actualizarGrafica();
+    chart.update();
 
   } catch (error) {
     console.error(error);
   }
 }
 
-// 📉 regresión simple (pendiente)
-function pendiente(arr) {
-  let n = arr.length;
-  if (n < 5) return 0;
-
-  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-
-  for (let i = 0; i < n; i++) {
-    sumX += i;
-    sumY += arr[i];
-    sumXY += i * arr[i];
-    sumXX += i * i;
-  }
-
-  return (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-}
-
-// 🔥 modelo PRO
+// 🤖 modelo inteligente
 function analizar() {
-  let slopeBrent = pendiente(brentHist);
-  let slopeUsd = pendiente(usdHist);
 
-  let score = (slopeBrent * 0.7) + (slopeUsd * 0.3);
+  if (brentHist.length < 10) return;
+
+  let cambioBrent = brentHist[brentHist.length-1] - brentHist[brentHist.length-5];
+  let cambioUsd = usdHist[usdHist.length-1] - usdHist[usdHist.length-5];
+
+  let score = (cambioBrent * 0.7) + (cambioUsd * 2);
 
   let señal = document.getElementById("senal");
 
-  if (score > 0.05) {
+  if (score > 2) {
     señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
     señal.style.color = "red";
   } 
-  else if (score > 0.02) {
+  else if (score > 0.5) {
     señal.innerText = "🟠 PRESIÓN ALCISTA";
     señal.style.color = "orange";
   }
-  else if (score < -0.05) {
+  else if (score < -1) {
     señal.innerText = "🟢 BAJA DE COSTOS";
     señal.style.color = "green";
   }
@@ -166,11 +164,8 @@ function analizar() {
   }
 }
 
-// gráfica
+// 📊 gráfica PRO
 const ctx = document.getElementById("grafica").getContext("2d");
-
-let mezclaHist = [];
-let baseOilHist = [];
 
 let chart = new Chart(ctx, {
   type: 'line',
@@ -224,6 +219,11 @@ let chart = new Chart(ctx, {
     }
   }
 });
+
+// loop
+setInterval(obtenerDatos, 60000);
+obtenerDatos();
+
 </script>
 
 </body>
