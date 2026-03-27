@@ -169,24 +169,61 @@ function analizar() {
 // gráfica
 const ctx = document.getElementById("grafica").getContext("2d");
 
+let mezclaHist = [];
+let baseOilHist = [];
+
 let chart = new Chart(ctx, {
   type: 'line',
   data: {
     labels: labels,
-    datasets: [{
-      label: 'Brent',
-      data: brentHist
-    }]
+    datasets: [
+      {
+        label: 'Brent',
+        data: brentHist,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Mezcla MX',
+        data: mezclaHist,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Base Oil',
+        data: baseOilHist,
+        yAxisID: 'y'
+      },
+      {
+        label: 'USD/MXN',
+        data: usdHist,
+        yAxisID: 'y1'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        labels: { color: "white" }
+      }
+    },
+    scales: {
+      y: {
+        position: 'left',
+        ticks: { color: "white" }
+      },
+      y1: {
+        position: 'right',
+        ticks: { color: "white" },
+        grid: {
+          drawOnChartArea: false
+        }
+      },
+      x: {
+        ticks: { color: "white" }
+      }
+    }
   }
 });
-
-function actualizarGrafica() {
-  chart.update();
-}
-
-setInterval(obtenerDatos, 60000);
-obtenerDatos();
-
 </script>
 
 </body>
