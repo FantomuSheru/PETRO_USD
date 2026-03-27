@@ -49,11 +49,13 @@ let etiquetas = [];
 
 async function obtenerDatos() {
   try {
-    // Brent (Alpha Vantage)
-    let brentRes = await fetch(`https://www.alphavantage.co/query?function=BRENT&interval=5min&apikey=${2Z2NE78SGVS6NB9L}`);
-    let brentData = await brentRes.json();
+    // Brent usando proxy gratuito (Stooq o similar)
+    let brentRes = await fetch("https://api.allorigins.win/raw?url=https://stooq.com/q/l/?s=brent&i=5m");
+    let texto = await brentRes.text();
 
-    let brentPrecio = Object.values(brentData.data || {})[0]?.value || "N/A";
+    let match = texto.match(/(\d+\.\d+)/);
+    let brentPrecio = match ? match[0] : "N/A";
+
     document.getElementById("brent").innerText = "$" + brentPrecio;
 
     // USD/MXN
@@ -63,7 +65,6 @@ async function obtenerDatos() {
     let usdMxn = usdData.rates.MXN;
     document.getElementById("usd").innerText = usdMxn.toFixed(2);
 
-    // Guardar para gráfica
     let hora = new Date().toLocaleTimeString();
 
     etiquetas.push(hora);
@@ -77,7 +78,7 @@ async function obtenerDatos() {
     actualizarGrafica();
 
   } catch (error) {
-    console.error(error);
+    console.error("Error:", error);
   }
 }
 
