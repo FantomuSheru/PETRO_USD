@@ -1,76 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Monitor Lubricantes</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  text-align: center;
-}
-
-.container {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.card {
-  background: #1e293b;
-  padding: 20px;
-  margin: 10px;
-  border-radius: 12px;
-  width: 220px;
-}
-
-.value {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-#senal {
-  font-size: 28px;
-  margin-top: 20px;
-  font-weight: bold;
-}
-</style>
-</head>
-
-<body>
-
-<h1>🛢️ Monitor de Lubricantes</h1>
-
-<div class="container">
-
-  <div class="card">
-    <h3>Brent</h3>
-    <div id="brent" class="value">...</div>
-  </div>
-
-  <div class="card">
-    <h3>USD/MXN</h3>
-    <div id="usd" class="value">...</div>
-  </div>
-
-  <div class="card">
-    <h3>Tendencia Brent</h3>
-    <div id="trendBrent" class="value">...</div>
-  </div>
-
-  <div class="card">
-    <h3>Tendencia USD</h3>
-    <div id="trendUsd" class="value">...</div>
-  </div>
-
-</div>
-
-<div id="senal">Analizando mercado...</div>
-
-<canvas id="grafica"></canvas>
 
 <script>
 
@@ -87,12 +15,11 @@ async function obtenerDatos() {
     let data = await res.json();
     let brent = data.brent;
 
-    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
-
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
     let usd = usdData.rates.MXN;
 
+    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
     document.getElementById("usd").innerText = usd.toFixed(2);
 
     let time = new Date().toLocaleTimeString();
@@ -101,54 +28,71 @@ async function obtenerDatos() {
     brentHist.push(brent);
     usdHist.push(usd);
 
-    if (labels.length > 20) {
+    if (labels.length > 25) {
       labels.shift();
       brentHist.shift();
       usdHist.shift();
     }
 
     analizar();
+    predecir();
 
   } catch (error) {
     console.error(error);
   }
 }
 
-function calcularCambio(arr) {
-  if (arr.length < 5) return 0;
-  return ((arr[arr.length-1] - arr[arr.length-5]) / arr[arr.length-5]) * 100;
+// 📊 tendencia
+function cambio(arr, n=5) {
+  if (arr.length < n) return 0;
+  return (arr[arr.length-1] - arr[arr.length-n]) / arr[arr.length-n];
 }
 
-function analizar() {
-  let cambioBrent = calcularCambio(brentHist);
-  let cambioUsd = calcularCambio(usdHist);
+// 🔮 MODELO PREDICTIVO
+function predecir() {
+  if (brentHist.length < 10) return;
 
-  document.getElementById("trendBrent").innerText = cambioBrent.toFixed(2) + "%";
-  document.getElementById("trendUsd").innerText = cambioUsd.toFixed(2) + "%";
+  let trendBrent = cambio(brentHist, 5);
+  let trendUsd = cambio(usdHist, 5);
+
+  let velocidadBrent = cambio(brentHist, 2);
+  let velocidadUsd = cambio(usdHist, 2);
+
+  // 🔥 fórmula simple pero poderosa
+  let score = (trendBrent * 0.6) + (trendUsd * 0.3) + (velocidadBrent * 0.1);
 
   let señal = document.getElementById("senal");
+  let pred = document.getElementById("prediccion");
 
-  // 🔥 lógica enfocada a lubricantes
-  if (cambioBrent > 1 && cambioUsd > 0.5) {
-    señal.innerText = "🔴 SUBIDA INMINENTE DE LUBRICANTES";
+  if (score > 0.02) {
+    señal.innerText = "🔴 SUBIDA PROBABLE (3-5 días)";
     señal.style.color = "red";
+    pred.innerText = "Alta probabilidad ↑";
   } 
-  else if (cambioBrent > 0.5) {
-    señal.innerText = "🟠 PRESIÓN POR CRUDO";
+  else if (score > 0.01) {
+    señal.innerText = "🟠 PRESIÓN ALCISTA";
     señal.style.color = "orange";
+    pred.innerText = "Probabilidad media ↑";
   }
-  else if (cambioUsd > 0.5) {
-    señal.innerText = "🟠 PRESIÓN POR TIPO DE CAMBIO";
-    señal.style.color = "orange";
-  }
-  else if (cambioBrent < -1) {
-    señal.innerText = "🟢 POSIBLE BAJA DE COSTOS";
+  else if (score < -0.02) {
+    señal.innerText = "🟢 POSIBLE BAJA";
     señal.style.color = "green";
+    pred.innerText = "Probabilidad ↓";
   }
   else {
-    señal.innerText = "🟡 MERCADO ESTABLE";
+    señal.innerText = "🟡 MERCADO LATERAL";
     señal.style.color = "yellow";
+    pred.innerText = "Sin señal clara";
   }
+}
+
+// 📊 análisis actual
+function analizar() {
+  let tBrent = (cambio(brentHist) * 100).toFixed(2);
+  let tUsd = (cambio(usdHist) * 100).toFixed(2);
+
+  document.getElementById("trendBrent").innerText = tBrent + "%";
+  document.getElementById("trendUsd").innerText = tUsd + "%";
 }
 
 // gráfico
@@ -169,6 +113,3 @@ setInterval(obtenerDatos, 60000);
 obtenerDatos();
 
 </script>
-
-</body>
-</html>
