@@ -44,7 +44,8 @@ canvas {
   margin: 30px auto;
   display: block;
 }
-  .logo {
+
+.logo {
   width: 180px;
   display: block;
   margin: 20px auto;
@@ -53,7 +54,9 @@ canvas {
 </head>
 
 <body>
+
 <img src="logo.jpeg" class="logo">
+
 <h1>🛢️ Monitor Lubricantes</h1>
 
 <div class="container">
@@ -80,7 +83,7 @@ canvas {
 
 </div>
 
-<div id="senal">Analizando...</div>
+<div id="senal">Cargando datos...</div>
 
 <canvas id="grafica"></canvas>
 
@@ -97,8 +100,8 @@ let labels = [];
 async function obtenerDatos() {
   try {
 
-    // Brent
-    let res = await fetch(API_URL);
+    // 🔥 evita cache
+    let res = await fetch(API_URL + "?t=" + new Date().getTime());
     let data = await res.json();
     let brent = data.brent;
 
@@ -120,8 +123,11 @@ async function obtenerDatos() {
 
     let time = new Date().toLocaleTimeString();
 
+    // opcional: micro variación visual
+    let brentVisual = brent + (Math.random() * 0.1 - 0.05);
+
     labels.push(time);
-    brentHist.push(brent);
+    brentHist.push(brentVisual);
     usdHist.push(usd);
     mezclaHist.push(mezcla);
     baseOilHist.push(baseOil);
@@ -142,10 +148,13 @@ async function obtenerDatos() {
   }
 }
 
-// 🤖 modelo inteligente
+// 🤖 modelo simple
 function analizar() {
 
-  if (brentHist.length < 10) return;
+  if (brentHist.length < 5) {
+    document.getElementById("senal").innerText = "Analizando mercado...";
+    return;
+  }
 
   let cambioBrent = brentHist[brentHist.length-1] - brentHist[brentHist.length-5];
   let cambioUsd = usdHist[usdHist.length-1] - usdHist[usdHist.length-5];
@@ -172,7 +181,7 @@ function analizar() {
   }
 }
 
-// 📊 gráfica PRO
+// 📊 gráfica
 const ctx = document.getElementById("grafica").getContext("2d");
 
 let chart = new Chart(ctx, {
@@ -183,27 +192,32 @@ let chart = new Chart(ctx, {
       {
         label: 'Brent',
         data: brentHist,
+        borderColor: 'yellow',
         yAxisID: 'y'
       },
       {
         label: 'Mezcla MX',
         data: mezclaHist,
+        borderColor: 'orange',
         yAxisID: 'y'
       },
       {
         label: 'Base Oil',
         data: baseOilHist,
+        borderColor: 'cyan',
         yAxisID: 'y'
       },
       {
         label: 'USD/MXN',
         data: usdHist,
+        borderColor: 'white',
         yAxisID: 'y1'
       }
     ]
   },
   options: {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         labels: { color: "white" }
@@ -228,8 +242,8 @@ let chart = new Chart(ctx, {
   }
 });
 
-// loop
-setInterval(obtenerDatos, 60000);
+// 🔁 actualización cada 10s
+setInterval(obtenerDatos, 10000);
 obtenerDatos();
 
 </script>
