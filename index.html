@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Dashboard Energía</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     body {
@@ -11,10 +10,6 @@
       background: #0f172a;
       color: white;
       text-align: center;
-    }
-
-    h1 {
-      margin-top: 20px;
     }
 
     .container {
@@ -29,11 +24,7 @@
       margin: 15px;
       border-radius: 12px;
       width: 250px;
-    }
-
-    canvas {
-      max-width: 800px;
-      margin-top: 30px;
+      font-size: 18px;
     }
 
     iframe {
@@ -50,109 +41,34 @@
 
 <div class="container">
   <div class="card">
-    <h2>Brent 🛢️</h2>
-    <p id="brent">Cargando...</p>
-  </div>
-
-  <div class="card">
     <h2>USD/MXN 💵</h2>
     <p id="usd">Cargando...</p>
   </div>
 </div>
 
-<canvas id="grafica"></canvas>
-
-<!-- Gráfico real de respaldo -->
+<!-- 🔹 GRÁFICO BRENT REAL -->
 <iframe 
   src="https://s.tradingview.com/widgetembed/?symbol=ICEEUR:BRN1!&interval=5&theme=dark"
   width="90%" 
-  height="400">
+  height="500">
 </iframe>
 
 <script>
 
-let precios = [];
-let etiquetas = [];
-
-async function obtenerDatos() {
+async function obtenerUSD() {
   try {
+    let res = await fetch("https://open.er-api.com/v6/latest/USD");
+    let data = await res.json();
 
-    // 🔹 Brent (Yahoo Finance)
-    let brentRes = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/BZ=F");
-    let brentData = await brentRes.json();
+    document.getElementById("usd").innerText = data.rates.MXN.toFixed(2);
 
-    let precio = brentData.chart.result[0].meta.regularMarketPrice;
-
-    document.getElementById("brent").innerText = "$" + precio;
-
-    // 🔹 USD/MXN
-    let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
-    let usdData = await usdRes.json();
-
-    let usdMxn = usdData.rates.MXN;
-
-    document.getElementById("usd").innerText = usdMxn.toFixed(2);
-
-    // 🔹 gráfica
-    let hora = new Date().toLocaleTimeString();
-
-    etiquetas.push(hora);
-    precios.push(precio);
-
-    if (etiquetas.length > 12) {
-      etiquetas.shift();
-      precios.shift();
-    }
-
-    actualizarGrafica();
-
-  } catch (error) {
-    console.error("Error:", error);
-
-    document.getElementById("brent").innerText = "No disponible";
+  } catch {
     document.getElementById("usd").innerText = "No disponible";
   }
 }
 
-// 🔹 gráfica
-const ctx = document.getElementById("grafica").getContext("2d");
-
-let chart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: etiquetas,
-    datasets: [{
-      label: 'Precio Brent',
-      data: precios
-    }]
-  },
-  options: {
-    plugins: {
-      legend: {
-        labels: { color: "white" }
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: "white" }
-      },
-      y: {
-        ticks: { color: "white" }
-      }
-    }
-  }
-});
-
-// actualizar
-function actualizarGrafica() {
-  chart.update();
-}
-
-// cada 2 minutos
-setInterval(obtenerDatos, 120000);
-
-// primera carga
-obtenerDatos();
+setInterval(obtenerUSD, 60000);
+obtenerUSD();
 
 </script>
 
