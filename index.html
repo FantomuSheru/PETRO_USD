@@ -50,7 +50,7 @@ let etiquetas = [];
 async function obtenerDatos() {
   try {
     // Brent (Alpha Vantage)
-    let brentRes = await fetch(`https://www.alphavantage.co/query?function=BRENT&interval=5min&apikey=${API_KEY}`);
+    let brentRes = await fetch(`https://www.alphavantage.co/query?function=BRENT&interval=5min&apikey=${2Z2NE78SGVS6NB9L}`);
     let brentData = await brentRes.json();
 
     let brentPrecio = Object.values(brentData.data || {})[0]?.value || "N/A";
