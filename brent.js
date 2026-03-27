@@ -8,12 +8,12 @@ export default async function handler(req, res) {
 
     const precio = data.chart.result[0].meta.regularMarketPrice;
 
-    res.status(200).json({
+    return res.status(200).json({
       brent: precio
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: "Error obteniendo Brent"
     });
   }
