@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard Lubricantes</title>
+  <title>Dashboard Energía</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -14,67 +14,97 @@
     .card {
       background: #1e293b;
       padding: 20px;
-      margin: 10px;
-      border-radius: 10px;
+      margin: 15px;
+      border-radius: 12px;
       display: inline-block;
-      width: 200px;
+      width: 250px;
     }
-    .value {
-      font-size: 24px;
-      font-weight: bold;
+    canvas {
+      max-width: 800px;
+      margin-top: 30px;
     }
-    .positivo { color: #22c55e; }
-    .negativo { color: #ef4444; }
   </style>
 </head>
-
 <body>
 
-<h1>📊 Índice Lubricantes México</h1>
+<h1>📊 Dashboard Energía</h1>
 
 <div class="card">
-  <h3>Brent</h3>
-  <div id="brent" class="value">--</div>
+  <h2>Brent 🛢️</h2>
+  <p id="brent">Cargando...</p>
 </div>
 
 <div class="card">
-  <h3>USD/MXN</h3>
-  <div id="usd" class="value">--</div>
+  <h2>USD/MXN 💵</h2>
+  <p id="usd">Cargando...</p>
 </div>
 
-<div class="card">
-  <h3>Mezcla MX</h3>
-  <div id="mezcla" class="value">--</div>
-</div>
-
-<div class="card">
-  <h3>Índice</h3>
-  <div id="indice" class="value">--</div>
-</div>
-
-<canvas id="grafica" width="400" height="200"></canvas>
+<canvas id="grafica"></canvas>
 
 <script>
+const API_KEY = "TU_API_KEY_AQUI"; // <-- Reemplaza
 
-// 🔢 DATOS (puedes cambiarlos manualmente)
-let brent = 107;
-let brentPrev = 82;
+let precios = [];
+let etiquetas = [];
 
-let usd = 17.2;
-let usdPrev = 16.9;
+async function obtenerDatos() {
+  try {
+    // Brent (Alpha Vantage)
+    let brentRes = await fetch(`https://www.alphavantage.co/query?function=BRENT&interval=5min&apikey=${API_KEY}`);
+    let brentData = await brentRes.json();
 
-let mezcla = 78;
-let mezclaPrev = 75;
+    let brentPrecio = Object.values(brentData.data || {})[0]?.value || "N/A";
+    document.getElementById("brent").innerText = "$" + brentPrecio;
 
-// 📈 CAMBIOS %
-let brentChange = (brent - brentPrev) / brentPrev;
-let usdChange = (usd - usdPrev) / usdPrev;
-let mezclaChange = (mezcla - mezclaPrev) / mezclaPrev;
+    // USD/MXN
+    let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
+    let usdData = await usdRes.json();
 
-// 🧠 ÍNDICE (ajústalo a tu criterio)
-let indice = 
-  (brentChange * 0.4) +
-  (usdChange * 0.3) +
-  (mezclaChange * 0.3);
+    let usdMxn = usdData.rates.MXN;
+    document.getElementById("usd").innerText = usdMxn.toFixed(2);
 
-// 🎯
+    // Guardar para gráfica
+    let hora = new Date().toLocaleTimeString();
+
+    etiquetas.push(hora);
+    precios.push(brentPrecio);
+
+    if (etiquetas.length > 10) {
+      etiquetas.shift();
+      precios.shift();
+    }
+
+    actualizarGrafica();
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+const ctx = document.getElementById("grafica").getContext("2d");
+
+let chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: etiquetas,
+    datasets: [{
+      label: 'Precio Brent',
+      data: precios
+    }]
+  }
+});
+
+function actualizarGrafica() {
+  chart.update();
+}
+
+// Actualiza cada 5 min
+setInterval(obtenerDatos, 300000);
+
+// Primera carga
+obtenerDatos();
+
+</script>
+
+</body>
+</html>
