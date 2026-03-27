@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitor Lubricantes PRO</title>
+<title>Monitor Energía PRO+</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -15,16 +15,16 @@ body {
 
 .container {
   display: flex;
-  justify-content: center;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .card {
   background: #1e293b;
-  padding: 20px;
   margin: 10px;
+  padding: 15px;
   border-radius: 12px;
-  width: 220px;
+  width: 200px;
 }
 
 .value {
@@ -33,21 +33,16 @@ body {
 }
 
 #senal {
-  font-size: 26px;
+  font-size: 28px;
   margin-top: 20px;
-  font-weight: bold;
 }
 
-#prediccion {
-  font-size: 18px;
-  margin-top: 10px;
-}
 </style>
 </head>
 
 <body>
 
-<h1>🛢️ Monitor Lubricantes PRO</h1>
+<h1>🛢️ Monitor Lubricantes PRO+</h1>
 
 <div class="container">
 
@@ -62,19 +57,18 @@ body {
   </div>
 
   <div class="card">
-    <h3>Tendencia Brent</h3>
-    <div id="trendBrent" class="value">...</div>
+    <h3>Mezcla MX</h3>
+    <div id="mezcla" class="value">...</div>
   </div>
 
   <div class="card">
-    <h3>Tendencia USD</h3>
-    <div id="trendUsd" class="value">...</div>
+    <h3>Base Oil</h3>
+    <div id="baseoil" class="value">...</div>
   </div>
 
 </div>
 
-<div id="senal">Analizando...</div>
-<div id="prediccion">Calculando...</div>
+<div id="senal">Analizando mercado...</div>
 
 <canvas id="grafica"></canvas>
 
@@ -91,9 +85,6 @@ async function obtenerDatos() {
 
     let res = await fetch(API_URL);
     let data = await res.json();
-
-    if (!data.brent) throw "No data";
-
     let brent = data.brent;
 
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
@@ -103,71 +94,75 @@ async function obtenerDatos() {
     document.getElementById("brent").innerText = "$" + brent.toFixed(2);
     document.getElementById("usd").innerText = usd.toFixed(2);
 
+    // 🇲🇽 Mezcla mexicana estimada
+    let mezcla = brent - 7;
+    document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
+
+    // 📦 Base oil estimado
+    let baseOil = (brent * 0.75) * (usd / 17);
+    document.getElementById("baseoil").innerText = baseOil.toFixed(2);
+
     let time = new Date().toLocaleTimeString();
 
     labels.push(time);
     brentHist.push(brent);
     usdHist.push(usd);
 
-    if (labels.length > 20) {
+    if (labels.length > 25) {
       labels.shift();
       brentHist.shift();
       usdHist.shift();
     }
 
     analizar();
-    predecir();
     actualizarGrafica();
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error(error);
   }
 }
 
-// tendencia
-function cambio(arr, n=5) {
-  if (arr.length < n) return 0;
-  return (arr[arr.length-1] - arr[arr.length-n]) / arr[arr.length-n];
+// 📉 regresión simple (pendiente)
+function pendiente(arr) {
+  let n = arr.length;
+  if (n < 5) return 0;
+
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+
+  for (let i = 0; i < n; i++) {
+    sumX += i;
+    sumY += arr[i];
+    sumXY += i * arr[i];
+    sumXX += i * i;
+  }
+
+  return (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
 }
 
-// análisis
+// 🔥 modelo PRO
 function analizar() {
-  let tBrent = (cambio(brentHist) * 100).toFixed(2);
-  let tUsd = (cambio(usdHist) * 100).toFixed(2);
+  let slopeBrent = pendiente(brentHist);
+  let slopeUsd = pendiente(usdHist);
 
-  document.getElementById("trendBrent").innerText = tBrent + "%";
-  document.getElementById("trendUsd").innerText = tUsd + "%";
-}
-
-// predicción
-function predecir() {
-  if (brentHist.length < 10) return;
-
-  let trendBrent = cambio(brentHist, 5);
-  let trendUsd = cambio(usdHist, 5);
-  let vel = cambio(brentHist, 2);
-
-  let score = (trendBrent * 0.6) + (trendUsd * 0.3) + (vel * 0.1);
+  let score = (slopeBrent * 0.7) + (slopeUsd * 0.3);
 
   let señal = document.getElementById("senal");
-  let pred = document.getElementById("prediccion");
 
-  if (score > 0.02) {
-    señal.innerText = "🔴 SUBIDA PROBABLE";
+  if (score > 0.05) {
+    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
     señal.style.color = "red";
-    pred.innerText = "Alta probabilidad";
-  } else if (score > 0.01) {
-    señal.innerText = "🟠 PRESIÓN";
+  } 
+  else if (score > 0.02) {
+    señal.innerText = "🟠 PRESIÓN ALCISTA";
     señal.style.color = "orange";
-    pred.innerText = "Media probabilidad";
-  } else if (score < -0.02) {
-    señal.innerText = "🟢 BAJA";
+  }
+  else if (score < -0.05) {
+    señal.innerText = "🟢 BAJA DE COSTOS";
     señal.style.color = "green";
-    pred.innerText = "Probable baja";
-  } else {
-    señal.innerText = "🟡 ESTABLE";
+  }
+  else {
+    señal.innerText = "🟡 MERCADO ESTABLE";
     señal.style.color = "yellow";
-    pred.innerText = "Sin señal clara";
   }
 }
 
