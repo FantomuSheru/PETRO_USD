@@ -53,22 +53,20 @@ const API_URL = "https://petro-usd.vercel.app/api/brent";
 async function obtenerDatos() {
   try {
 
-    // 🔹 Brent (tu API)
+    // Brent desde tu API
     let res = await fetch(API_URL);
     let data = await res.json();
 
-    console.log("Brent:", data);
-
     document.getElementById("brent").innerText = "$" + data.brent;
 
-    // 🔹 USD/MXN
+    // USD/MXN
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
 
     document.getElementById("usd").innerText = usdData.rates.MXN.toFixed(2);
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error(error);
 
     document.getElementById("brent").innerText = "Error";
     document.getElementById("usd").innerText = "Error";
