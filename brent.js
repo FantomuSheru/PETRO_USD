@@ -1,9 +1,9 @@
 export default async function handler(req, res) {
 
-  // 🔥 SOLUCIÓN CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
   res.setHeader("Cache-Control", "no-store");
+
   try {
     const response = await fetch(
       "https://query1.finance.yahoo.com/v8/finance/chart/BZ=F"
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const precio = data.chart.result[0].meta.regularMarketPrice;
+    const precio = data.chart.result[0].indicators.quote[0].close.slice(-1)[0];
 
     return res.status(200).json({
       brent: precio
