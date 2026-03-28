@@ -2,85 +2,98 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitor Lubricantes</title>
+<title>Monitor Lubricantes - Grupos I, II y III</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   background: #000000;
   color: white;
   text-align: center;
+  margin: 0;
+  padding: 20px;
 }
 
 .container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 15px;
 }
 
 .card {
   background: #1e293b;
   margin: 10px;
-  padding: 15px;
+  padding: 18px;
   border-radius: 12px;
-  width: 200px;
+  width: 210px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 .value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: bold;
+  margin-top: 8px;
 }
 
 #senal {
-  font-size: 26px;
-  margin-top: 20px;
+  font-size: 28px;
+  margin: 25px auto;
+  padding: 15px;
+  border-radius: 10px;
+  width: fit-content;
+  min-width: 420px;
 }
 
 canvas {
-  width: 90% !important;
-  max-width: 1200px;
-  height: 400px !important;
+  width: 95% !important;
+  max-width: 1300px;
+  height: 420px !important;
   margin: 30px auto;
   display: block;
 }
 
-.logo {
-  width: 180px;
-  display: block;
-  margin: 20px auto;
-}
+.group1 { color: #00ffcc; }
+.group2 { color: #ffaa00; }
+.group3 { color: #ff66ff; }
 </style>
 </head>
 
 <body>
 
-<img src="logo.jpeg" class="logo">
+<img src="logo.jpeg" class="logo" alt="Logo">
 
-<h1>🛢️ Monitor Lubricantes</h1>
+<h1>🛢️ Monitor Lubricantes - Grupos I, II y III</h1>
 
 <div class="container">
-
   <div class="card">
     <h3>Brent</h3>
     <div id="brent" class="value">...</div>
   </div>
-
   <div class="card">
     <h3>USD/MXN</h3>
     <div id="usd" class="value">...</div>
   </div>
-
   <div class="card">
     <h3>Mezcla MX</h3>
     <div id="mezcla" class="value">...</div>
   </div>
+</div>
 
+<div class="container">
   <div class="card">
-    <h3>Base Oil</h3>
-    <div id="baseoil" class="value">...</div>
+    <h3>Base Oil Group I</h3>
+    <div id="baseoil1" class="value group1">...</div>
   </div>
-
+  <div class="card">
+    <h3>Base Oil Group II</h3>
+    <div id="baseoil2" class="value group2">...</div>
+  </div>
+  <div class="card">
+    <h3>Base Oil Group III</h3>
+    <div id="baseoil3" class="value group3">...</div>
+  </div>
 </div>
 
 <div id="senal">Cargando datos...</div>
@@ -88,100 +101,133 @@ canvas {
 <canvas id="grafica"></canvas>
 
 <script>
+// ==================== CONFIGURACIÓN AJUSTABLE ====================
+const CONFIG = {
+  descuentoMezcla: 7,           // Ajusta según diferencial real Brent vs Mezcla MX
+  rendimientoGroup1: 0.80,      // Rendimiento aproximado
+  factorConversion: 17.5,       // Factor de calibración
+  diferencialGroup2: 1.22,      // Group II ≈ 22% más caro
+  diferencialGroup3: 1.48       // Group III ≈ 48% más caro
+};
 
-const API_URL = "https://petro-usd.vercel.app/api/brent";
-
-let brentHist = [];
-let usdHist = [];
-let mezclaHist = [];
-let baseOilHist = [];
+// Variables globales
+let brentHist = [], usdHist = [], mezclaHist = [];
+let group1Hist = [], group2Hist = [], group3Hist = [];
 let labels = [];
 
+let flashInterval = null;
+const tituloOriginal = "Monitor Lubricantes - Grupos I, II y III";
+
+// Función para hacer parpadear la pestaña
+function startFlashingTitle() {
+  if (flashInterval) return;
+  
+  flashInterval = setInterval(() => {
+    document.title = (document.title === tituloOriginal) 
+      ? "🔴 ¡ALERTA! SUBIDA FUERTE DE COSTOS" 
+      : tituloOriginal;
+  }, 700);
+}
+
+function stopFlashingTitle() {
+  if (flashInterval) {
+    clearInterval(flashInterval);
+    flashInterval = null;
+  }
+  document.title = tituloOriginal;
+}
+
+// ==================== OBTENER DATOS ====================
 async function obtenerDatos() {
   try {
-
-    // 🔥 evita cache
-    let res = await fetch(API_URL + "?t=" + new Date().getTime());
+    // Brent
+    let res = await fetch("https://petro-usd.vercel.app/api/brent?t=" + new Date().getTime());
     let data = await res.json();
-    let brent = data.brent;
+    let brent = parseFloat(data.brent) || 105;
 
-    // USD
+    // Dólar
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
-    let usd = usdData.rates.MXN;
+    let usd = parseFloat(usdData.rates.MXN) || 18.10;
 
+    // Cálculos
+    let mezcla = brent - CONFIG.descuentoMezcla;
+    let baseOil1 = (mezcla * CONFIG.rendimientoGroup1) * (usd / CONFIG.factorConversion);
+    let baseOil2 = baseOil1 * CONFIG.diferencialGroup2;
+    let baseOil3 = baseOil1 * CONFIG.diferencialGroup3;
+
+    // Actualizar tarjetas
     document.getElementById("brent").innerText = "$" + brent.toFixed(2);
     document.getElementById("usd").innerText = usd.toFixed(2);
-
-    // Mezcla MX (estimada)
-    let mezcla = brent - 7;
     document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
+    document.getElementById("baseoil1").innerText = baseOil1.toFixed(2);
+    document.getElementById("baseoil2").innerText = baseOil2.toFixed(2);
+    document.getElementById("baseoil3").innerText = baseOil3.toFixed(2);
 
-    // Base Oil
-    let baseOil = (mezcla * 0.8) * (usd / 17.5);
-    document.getElementById("baseoil").innerText = baseOil.toFixed(2);
+    let time = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
 
-    let time = new Date().toLocaleTimeString();
-
-    // opcional: micro variación visual
-    let brentVisual = brent + (Math.random() * 0.1 - 0.05);
-
+    // Guardar historial
     labels.push(time);
-    brentHist.push(brentVisual);
+    brentHist.push(brent);
     usdHist.push(usd);
     mezclaHist.push(mezcla);
-    baseOilHist.push(baseOil);
+    group1Hist.push(baseOil1);
+    group2Hist.push(baseOil2);
+    group3Hist.push(baseOil3);
 
-    if (labels.length > 25) {
-      labels.shift();
-      brentHist.shift();
-      usdHist.shift();
-      mezclaHist.shift();
-      baseOilHist.shift();
+    if (labels.length > 30) {
+      labels.shift(); brentHist.shift(); usdHist.shift(); mezclaHist.shift();
+      group1Hist.shift(); group2Hist.shift(); group3Hist.shift();
     }
 
     analizar();
     chart.update();
 
   } catch (error) {
-    console.error(error);
+    console.error("Error:", error);
   }
 }
 
-// 🤖 modelo simple
+// Análisis y activación de alerta visual en pestaña
 function analizar() {
-
-  if (brentHist.length < 5) {
+  if (group1Hist.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
     return;
   }
 
   let cambioBrent = brentHist[brentHist.length-1] - brentHist[brentHist.length-5];
   let cambioUsd = usdHist[usdHist.length-1] - usdHist[usdHist.length-5];
+  let cambioGroup1 = group1Hist[group1Hist.length-1] - group1Hist[group1Hist.length-5];
 
-  let score = (cambioBrent * 0.7) + (cambioUsd * 2);
+  let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioGroup1 * 0.4);
 
   let señal = document.getElementById("senal");
 
-  if (score > 2) {
-    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
+  if (score > 3) {
+    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS (Grupos I-II-III)";
     señal.style.color = "red";
+    señal.style.background = "rgba(255,0,0,0.2)";
+    startFlashingTitle();           // ← Activa parpadeo de pestaña
   } 
-  else if (score > 0.5) {
-    señal.innerText = "🟠 PRESIÓN ALCISTA";
+  else if (score > 1) {
+    señal.innerText = "🟠 PRESIÓN ALCISTA en Base Oils";
     señal.style.color = "orange";
-  }
-  else if (score < -1) {
+    señal.style.background = "rgba(255,165,0,0.15)";
+    stopFlashingTitle();
+  } 
+  else if (score < -1.5) {
     señal.innerText = "🟢 BAJA DE COSTOS";
-    señal.style.color = "green";
-  }
+    señal.style.color = "lime";
+    stopFlashingTitle();
+  } 
   else {
     señal.innerText = "🟡 MERCADO ESTABLE";
     señal.style.color = "yellow";
+    stopFlashingTitle();
   }
 }
 
-// 📊 gráfica
+// ==================== GRÁFICA ====================
 const ctx = document.getElementById("grafica").getContext("2d");
 
 let chart = new Chart(ctx, {
@@ -189,64 +235,30 @@ let chart = new Chart(ctx, {
   data: {
     labels: labels,
     datasets: [
-      {
-        label: 'Brent',
-        data: brentHist,
-        borderColor: 'yellow',
-        yAxisID: 'y'
-      },
-      {
-        label: 'Mezcla MX',
-        data: mezclaHist,
-        borderColor: 'orange',
-        yAxisID: 'y'
-      },
-      {
-        label: 'Base Oil',
-        data: baseOilHist,
-        borderColor: 'cyan',
-        yAxisID: 'y'
-      },
-      {
-        label: 'USD/MXN',
-        data: usdHist,
-        borderColor: 'white',
-        yAxisID: 'y1'
-      }
+      { label: 'Brent', data: brentHist, borderColor: 'yellow', yAxisID: 'y' },
+      { label: 'Mezcla MX', data: mezclaHist, borderColor: 'orange', yAxisID: 'y' },
+      { label: 'Base Oil Group I', data: group1Hist, borderColor: '#00ffcc', yAxisID: 'y' },
+      { label: 'Base Oil Group II', data: group2Hist, borderColor: '#ffaa00', yAxisID: 'y' },
+      { label: 'Base Oil Group III', data: group3Hist, borderColor: '#ff66ff', yAxisID: 'y' },
+      { label: 'USD/MXN', data: usdHist, borderColor: 'white', yAxisID: 'y1' }
     ]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: { color: "white" }
-      }
-    },
+    plugins: { legend: { labels: { color: "white" } } },
     scales: {
-      y: {
-        position: 'left',
-        ticks: { color: "white" }
-      },
-      y1: {
-        position: 'right',
-        ticks: { color: "white" },
-        grid: {
-          drawOnChartArea: false
-        }
-      },
-      x: {
-        ticks: { color: "white" }
-      }
+      y: { position: 'left', ticks: { color: "white" } },
+      y1: { position: 'right', ticks: { color: "white" }, grid: { drawOnChartArea: false } },
+      x: { ticks: { color: "white" } }
     }
   }
 });
 
-// 🔁 actualización cada 10s
+// Actualización automática
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
 
 </script>
-
 </body>
 </html>
