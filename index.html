@@ -15,6 +15,22 @@ body {
   padding: 20px;
 }
 
+/* ✅ LOGO RESPONSIVO */
+.logo {
+  max-width: 180px;
+  width: 40%;
+  height: auto;
+  margin-bottom: 10px;
+}
+
+/* En móvil */
+@media (max-width: 600px) {
+  .logo {
+    width: 60%;
+    max-width: 140px;
+  }
+}
+
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -30,12 +46,6 @@ body {
   width: 210px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
-  
-.logo {
-  width: 1100px;
-  display: block;
-  margin: 20px auto;
-}
 
 .value {
   font-size: 24px;
@@ -49,7 +59,7 @@ body {
   padding: 15px;
   border-radius: 10px;
   width: fit-content;
-  min-width: 420px;
+  min-width: 300px;
 }
 
 canvas {
@@ -107,16 +117,15 @@ canvas {
 <canvas id="grafica"></canvas>
 
 <script>
-// ==================== CONFIGURACIÓN AJUSTABLE ====================
+// ==================== CONFIG ====================
 const CONFIG = {
-  descuentoMezcla: 7,           // Ajusta según diferencial real Brent vs Mezcla MX
-  rendimientoGroup1: 0.80,      // Rendimiento aproximado
-  factorConversion: 17.5,       // Factor de calibración
-  diferencialGroup2: 1.22,      // Group II ≈ 22% más caro
-  diferencialGroup3: 1.48       // Group III ≈ 48% más caro
+  descuentoMezcla: 7,
+  rendimientoGroup1: 0.80,
+  factorConversion: 17.5,
+  diferencialGroup2: 1.22,
+  diferencialGroup3: 1.48
 };
 
-// Variables globales
 let brentHist = [], usdHist = [], mezclaHist = [];
 let group1Hist = [], group2Hist = [], group3Hist = [];
 let labels = [];
@@ -124,10 +133,8 @@ let labels = [];
 let flashInterval = null;
 const tituloOriginal = "Monitor Lubricantes - Grupos I, II y III";
 
-// Función para hacer parpadear la pestaña
 function startFlashingTitle() {
   if (flashInterval) return;
-  
   flashInterval = setInterval(() => {
     document.title = (document.title === tituloOriginal) 
       ? "🔴 ¡ALERTA! SUBIDA FUERTE DE COSTOS" 
@@ -143,26 +150,22 @@ function stopFlashingTitle() {
   document.title = tituloOriginal;
 }
 
-// ==================== OBTENER DATOS ====================
+// ==================== DATOS ====================
 async function obtenerDatos() {
   try {
-    // Brent
     let res = await fetch("https://petro-usd.vercel.app/api/brent?t=" + new Date().getTime());
     let data = await res.json();
     let brent = parseFloat(data.brent) || 105;
 
-    // Dólar
     let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
     let usdData = await usdRes.json();
     let usd = parseFloat(usdData.rates.MXN) || 18.10;
 
-    // Cálculos
     let mezcla = brent - CONFIG.descuentoMezcla;
     let baseOil1 = (mezcla * CONFIG.rendimientoGroup1) * (usd / CONFIG.factorConversion);
     let baseOil2 = baseOil1 * CONFIG.diferencialGroup2;
     let baseOil3 = baseOil1 * CONFIG.diferencialGroup3;
 
-    // Actualizar tarjetas
     document.getElementById("brent").innerText = "$" + brent.toFixed(2);
     document.getElementById("usd").innerText = usd.toFixed(2);
     document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
@@ -172,7 +175,6 @@ async function obtenerDatos() {
 
     let time = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
 
-    // Guardar historial
     labels.push(time);
     brentHist.push(brent);
     usdHist.push(usd);
@@ -194,16 +196,16 @@ async function obtenerDatos() {
   }
 }
 
-// Análisis y activación de alerta visual en pestaña
+// ==================== ALERTA ====================
 function analizar() {
   if (group1Hist.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
     return;
   }
 
-  let cambioBrent = brentHist[brentHist.length-1] - brentHist[brentHist.length-5];
-  let cambioUsd = usdHist[usdHist.length-1] - usdHist[usdHist.length-5];
-  let cambioGroup1 = group1Hist[group1Hist.length-1] - group1Hist[group1Hist.length-5];
+  let cambioBrent = brentHist.at(-1) - brentHist.at(-5);
+  let cambioUsd = usdHist.at(-1) - usdHist.at(-5);
+  let cambioGroup1 = group1Hist.at(-1) - group1Hist.at(-5);
 
   let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioGroup1 * 0.4);
 
@@ -213,20 +215,17 @@ function analizar() {
     señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS (Grupos I-II-III)";
     señal.style.color = "red";
     señal.style.background = "rgba(255,0,0,0.2)";
-    startFlashingTitle();           // ← Activa parpadeo de pestaña
-  } 
-  else if (score > 1) {
+    startFlashingTitle();
+  } else if (score > 1) {
     señal.innerText = "🟠 PRESIÓN ALCISTA en Base Oils";
     señal.style.color = "orange";
     señal.style.background = "rgba(255,165,0,0.15)";
     stopFlashingTitle();
-  } 
-  else if (score < -1.5) {
+  } else if (score < -1.5) {
     señal.innerText = "🟢 BAJA DE COSTOS";
     señal.style.color = "lime";
     stopFlashingTitle();
-  } 
-  else {
+  } else {
     señal.innerText = "🟡 MERCADO ESTABLE";
     señal.style.color = "yellow";
     stopFlashingTitle();
@@ -252,7 +251,17 @@ let chart = new Chart(ctx, {
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "white" } } },
+    plugins: {
+      legend: {
+        labels: {
+          color: "white",
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        }
+      }
+    },
     scales: {
       y: { position: 'left', ticks: { color: "white" } },
       y1: { position: 'right', ticks: { color: "white" }, grid: { drawOnChartArea: false } },
@@ -261,7 +270,7 @@ let chart = new Chart(ctx, {
   }
 });
 
-// Actualización automática
+// ==================== AUTO REFRESH ====================
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
 
