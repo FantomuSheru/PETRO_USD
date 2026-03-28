@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitor Commodities</title>
+<title>Monitor Commodities lubricantes</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -15,7 +15,7 @@ body {
   padding: 20px;
 }
 
-/* ✅ LOGO RESPONSIVO */
+/* LOGO RESPONSIVO */
 .logo {
   max-width: 180px;
   width: 40%;
@@ -23,7 +23,6 @@ body {
   margin-bottom: 10px;
 }
 
-/* En móvil */
 @media (max-width: 600px) {
   .logo {
     width: 60%;
@@ -117,7 +116,7 @@ canvas {
 <canvas id="grafica"></canvas>
 
 <script>
-// ==================== CONFIG ====================
+// CONFIG
 const CONFIG = {
   descuentoMezcla: 7,
   rendimientoGroup1: 0.80,
@@ -150,7 +149,7 @@ function stopFlashingTitle() {
   document.title = tituloOriginal;
 }
 
-// ==================== DATOS ====================
+// DATOS
 async function obtenerDatos() {
   try {
     let res = await fetch("https://petro-usd.vercel.app/api/brent?t=" + new Date().getTime());
@@ -196,7 +195,7 @@ async function obtenerDatos() {
   }
 }
 
-// ==================== ALERTA ====================
+// ALERTA
 function analizar() {
   if (group1Hist.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
@@ -232,7 +231,7 @@ function analizar() {
   }
 }
 
-// ==================== GRÁFICA ====================
+// GRÁFICA
 const ctx = document.getElementById("grafica").getContext("2d");
 
 let chart = new Chart(ctx, {
@@ -251,17 +250,32 @@ let chart = new Chart(ctx, {
   options: {
     responsive: true,
     maintainAspectRatio: false,
+
+    layout: {
+      padding: {
+        top: 10,
+        bottom: 20
+      }
+    },
+
     plugins: {
       legend: {
+        position: 'bottom',
         labels: {
           color: "white",
           font: {
-            size: 16,
+            size: 15,
             weight: 'bold'
-          }
+          },
+          boxWidth: 20,
+          boxHeight: 12,
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'line'
         }
       }
     },
+
     scales: {
       y: { position: 'left', ticks: { color: "white" } },
       y1: { position: 'right', ticks: { color: "white" }, grid: { drawOnChartArea: false } },
@@ -270,7 +284,7 @@ let chart = new Chart(ctx, {
   }
 });
 
-// ==================== AUTO REFRESH ====================
+// AUTO REFRESH
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
 
