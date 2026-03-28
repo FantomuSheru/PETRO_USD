@@ -1,28 +1,35 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Monitor Commodities lubricantes</title>
+<title>Monitor Commodities</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #000;
+  background: #000000;
   color: white;
   text-align: center;
   margin: 0;
   padding: 20px;
 }
 
-/* LOGO */
+/* ✅ LOGO RESPONSIVO */
 .logo {
-  max-width: 160px;
+  max-width: 180px;
   width: 40%;
   height: auto;
+  margin-bottom: 10px;
 }
 
-/* TARJETAS */
+/* En móvil */
+@media (max-width: 600px) {
+  .logo {
+    width: 60%;
+    max-width: 140px;
+  }
+}
+
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -32,145 +39,240 @@ body {
 
 .card {
   background: #1e293b;
+  margin: 10px;
   padding: 18px;
   border-radius: 12px;
   width: 210px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
-/* LEYENDA PRO */
-.legend-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #111827;
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 14px;
+.value {
+  font-size: 24px;
   font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s;
+  margin-top: 8px;
 }
 
-.legend-item:hover {
-  transform: scale(1.05);
-}
-
-.color-box {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+#senal {
+  font-size: 28px;
+  margin: 25px auto;
+  padding: 15px;
+  border-radius: 10px;
+  width: fit-content;
+  min-width: 300px;
 }
 
 canvas {
   width: 95% !important;
-  max-width: 1200px;
-  height: 400px !important;
-  margin: 20px auto;
+  max-width: 1300px;
+  height: 420px !important;
+  margin: 30px auto;
+  display: block;
 }
 
-/* MÓVIL */
-@media (max-width: 600px) {
-  .legend-item {
-    font-size: 12px;
-    padding: 6px 10px;
-  }
-}
+.group1 { color: #00ffcc; }
+.group2 { color: #ffaa00; }
+.group3 { color: #ff66ff; }
 </style>
 </head>
 
 <body>
 
-<img src="logo.jpeg" class="logo">
+<img src="logo.jpeg" class="logo" alt="Logo">
 
-<h2>🛢️ Monitor Commodities</h2>
+<h1>🛢️ Monitor Commodities - Lubricantes Grupos I, II y III</h1>
 
-<!-- LEYENDA PERSONALIZADA -->
-<div class="legend-container">
-  <div class="legend-item"><div class="color-box" style="background:yellow"></div>Brent</div>
-  <div class="legend-item"><div class="color-box" style="background:orange"></div>Mezcla MX</div>
-  <div class="legend-item"><div class="color-box" style="background:#00ffcc"></div>Group I</div>
-  <div class="legend-item"><div class="color-box" style="background:#ffaa00"></div>Group II</div>
-  <div class="legend-item"><div class="color-box" style="background:#ff66ff"></div>Group III</div>
-  <div class="legend-item"><div class="color-box" style="background:white"></div>USD/MXN</div>
+<div class="container">
+  <div class="card">
+    <h3>Brent</h3>
+    <div id="brent" class="value">...</div>
+  </div>
+  <div class="card">
+    <h3>USD/MXN</h3>
+    <div id="usd" class="value">...</div>
+  </div>
+  <div class="card">
+    <h3>Mezcla MX</h3>
+    <div id="mezcla" class="value">...</div>
+  </div>
 </div>
+
+<div class="container">
+  <div class="card">
+    <h3>Base Oil Group I</h3>
+    <div id="baseoil1" class="value group1">...</div>
+  </div>
+  <div class="card">
+    <h3>Base Oil Group II</h3>
+    <div id="baseoil2" class="value group2">...</div>
+  </div>
+  <div class="card">
+    <h3>Base Oil Group III</h3>
+    <div id="baseoil3" class="value group3">...</div>
+  </div>
+</div>
+
+<div id="senal">Cargando datos...</div>
 
 <canvas id="grafica"></canvas>
 
 <script>
-let labels = [];
+// ==================== CONFIG ====================
+const CONFIG = {
+  descuentoMezcla: 7,
+  rendimientoGroup1: 0.80,
+  factorConversion: 17.5,
+  diferencialGroup2: 1.22,
+  diferencialGroup3: 1.48
+};
+
 let brentHist = [], usdHist = [], mezclaHist = [];
-let g1 = [], g2 = [], g3 = [];
+let group1Hist = [], group2Hist = [], group3Hist = [];
+let labels = [];
 
-async function obtenerDatos() {
-  let res = await fetch("https://petro-usd.vercel.app/api/brent");
-  let data = await res.json();
-  let brent = parseFloat(data.brent) || 105;
+let flashInterval = null;
+const tituloOriginal = "Monitor Lubricantes - Grupos I, II y III";
 
-  let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
-  let usdData = await usdRes.json();
-  let usd = usdData.rates.MXN;
-
-  let mezcla = brent - 7;
-  let base1 = (mezcla * 0.8) * (usd / 17.5);
-  let base2 = base1 * 1.22;
-  let base3 = base1 * 1.48;
-
-  let time = new Date().toLocaleTimeString();
-
-  labels.push(time);
-  brentHist.push(brent);
-  usdHist.push(usd);
-  mezclaHist.push(mezcla);
-  g1.push(base1);
-  g2.push(base2);
-  g3.push(base3);
-
-  if (labels.length > 20) {
-    labels.shift();
-    brentHist.shift();
-    usdHist.shift();
-    mezclaHist.shift();
-    g1.shift();
-    g2.shift();
-    g3.shift();
-  }
-
-  chart.update();
+function startFlashingTitle() {
+  if (flashInterval) return;
+  flashInterval = setInterval(() => {
+    document.title = (document.title === tituloOriginal) 
+      ? "🔴 ¡ALERTA! SUBIDA FUERTE DE COSTOS" 
+      : tituloOriginal;
+  }, 700);
 }
 
-let chart = new Chart(document.getElementById("grafica"), {
+function stopFlashingTitle() {
+  if (flashInterval) {
+    clearInterval(flashInterval);
+    flashInterval = null;
+  }
+  document.title = tituloOriginal;
+}
+
+// ==================== DATOS ====================
+async function obtenerDatos() {
+  try {
+    let res = await fetch("https://petro-usd.vercel.app/api/brent?t=" + new Date().getTime());
+    let data = await res.json();
+    let brent = parseFloat(data.brent) || 105;
+
+    let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
+    let usdData = await usdRes.json();
+    let usd = parseFloat(usdData.rates.MXN) || 18.10;
+
+    let mezcla = brent - CONFIG.descuentoMezcla;
+    let baseOil1 = (mezcla * CONFIG.rendimientoGroup1) * (usd / CONFIG.factorConversion);
+    let baseOil2 = baseOil1 * CONFIG.diferencialGroup2;
+    let baseOil3 = baseOil1 * CONFIG.diferencialGroup3;
+
+    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
+    document.getElementById("usd").innerText = usd.toFixed(2);
+    document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
+    document.getElementById("baseoil1").innerText = baseOil1.toFixed(2);
+    document.getElementById("baseoil2").innerText = baseOil2.toFixed(2);
+    document.getElementById("baseoil3").innerText = baseOil3.toFixed(2);
+
+    let time = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+
+    labels.push(time);
+    brentHist.push(brent);
+    usdHist.push(usd);
+    mezclaHist.push(mezcla);
+    group1Hist.push(baseOil1);
+    group2Hist.push(baseOil2);
+    group3Hist.push(baseOil3);
+
+    if (labels.length > 30) {
+      labels.shift(); brentHist.shift(); usdHist.shift(); mezclaHist.shift();
+      group1Hist.shift(); group2Hist.shift(); group3Hist.shift();
+    }
+
+    analizar();
+    chart.update();
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+// ==================== ALERTA ====================
+function analizar() {
+  if (group1Hist.length < 5) {
+    document.getElementById("senal").innerText = "Analizando mercado...";
+    return;
+  }
+
+  let cambioBrent = brentHist.at(-1) - brentHist.at(-5);
+  let cambioUsd = usdHist.at(-1) - usdHist.at(-5);
+  let cambioGroup1 = group1Hist.at(-1) - group1Hist.at(-5);
+
+  let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioGroup1 * 0.4);
+
+  let señal = document.getElementById("senal");
+
+  if (score > 3) {
+    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS (Grupos I-II-III)";
+    señal.style.color = "red";
+    señal.style.background = "rgba(255,0,0,0.2)";
+    startFlashingTitle();
+  } else if (score > 1) {
+    señal.innerText = "🟠 PRESIÓN ALCISTA en Base Oils";
+    señal.style.color = "orange";
+    señal.style.background = "rgba(255,165,0,0.15)";
+    stopFlashingTitle();
+  } else if (score < -1.5) {
+    señal.innerText = "🟢 BAJA DE COSTOS";
+    señal.style.color = "lime";
+    stopFlashingTitle();
+  } else {
+    señal.innerText = "🟡 MERCADO ESTABLE";
+    señal.style.color = "yellow";
+    stopFlashingTitle();
+  }
+}
+
+// ==================== GRÁFICA ====================
+const ctx = document.getElementById("grafica").getContext("2d");
+
+let chart = new Chart(ctx, {
   type: 'line',
   data: {
-    labels,
+    labels: labels,
     datasets: [
-      { label: 'Brent', data: brentHist, borderColor: 'yellow' },
-      { label: 'Mezcla', data: mezclaHist, borderColor: 'orange' },
-      { label: 'G1', data: g1, borderColor: '#00ffcc' },
-      { label: 'G2', data: g2, borderColor: '#ffaa00' },
-      { label: 'G3', data: g3, borderColor: '#ff66ff' },
-      { label: 'USD', data: usdHist, borderColor: 'white' }
+      { label: 'Brent', data: brentHist, borderColor: 'yellow', yAxisID: 'y' },
+      { label: 'Mezcla MX', data: mezclaHist, borderColor: 'orange', yAxisID: 'y' },
+      { label: 'Base Oil Group I', data: group1Hist, borderColor: '#00ffcc', yAxisID: 'y' },
+      { label: 'Base Oil Group II', data: group2Hist, borderColor: '#ffaa00', yAxisID: 'y' },
+      { label: 'Base Oil Group III', data: group3Hist, borderColor: '#ff66ff', yAxisID: 'y' },
+      { label: 'USD/MXN', data: usdHist, borderColor: 'white', yAxisID: 'y1' }
     ]
   },
   options: {
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false // 🔥 QUITAMOS la fea
+        labels: {
+          color: "white",
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        }
       }
+    },
+    scales: {
+      y: { position: 'left', ticks: { color: "white" } },
+      y1: { position: 'right', ticks: { color: "white" }, grid: { drawOnChartArea: false } },
+      x: { ticks: { color: "white" } }
     }
   }
 });
 
+// ==================== AUTO REFRESH ====================
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
-</script>
 
+</script>
 </body>
 </html>
