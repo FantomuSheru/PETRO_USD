@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Monitor Commodities</title>
+
+<!-- ✅ FAVICON -->
+<link rel="icon" type="image/png" href="logo.png">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -38,25 +42,24 @@ body {
   gap: 13px;
 }
 
-/* 🔥 TARJETAS MÁS COMPACTAS */
+/* TARJETAS */
 .card {
   background: #1e293b;
   margin: 10px;
-  padding: 14px;        /* balance entre 12 y 18 */
+  padding: 14px;
   border-radius: 12px;
-  width: 200px;         /* antes 210 → ahora más equilibrado */
+  width: 200px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
 .card h3 {
-  font-size: 15px;      /* ligeramente más chico */
+  font-size: 15px;
   margin-bottom: 6px;
 }
 
 .value {
   font-size: 24px;
   font-weight: bold;
-  margin-top: 8px;      /* antes 24 → ahora más proporcional */
 }
 
 /* ALERTA */
@@ -80,7 +83,6 @@ canvas {
 .group1 { color: #00ffcc; }
 .group2 { color: #ffaa00; }
 .group3 { color: #ff66ff; }
-
 </style>
 </head>
 
@@ -125,6 +127,7 @@ canvas {
 <canvas id="grafica"></canvas>
 
 <script>
+// CONFIG
 const CONFIG = {
   descuentoMezcla: 7,
   rendimientoGroup1: 0.80,
@@ -137,50 +140,120 @@ let brentHist = [], usdHist = [], mezclaHist = [];
 let g1 = [], g2 = [], g3 = [];
 let labels = [];
 
-async function obtenerDatos() {
-  let res = await fetch("https://petro-usd.vercel.app/api/brent");
-  let data = await res.json();
-  let brent = parseFloat(data.brent) || 105;
+let flashInterval = null;
+const tituloNormal = "Monitor Commodities";
 
-  let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
-  let usdData = await usdRes.json();
-  let usd = usdData.rates.MXN;
-
-  let mezcla = brent - 7;
-  let base1 = (mezcla * 0.8) * (usd / 17.5);
-  let base2 = base1 * 1.22;
-  let base3 = base1 * 1.48;
-
-  document.getElementById("brent").innerText = "$" + brent.toFixed(2);
-  document.getElementById("usd").innerText = usd.toFixed(2);
-  document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
-  document.getElementById("baseoil1").innerText = base1.toFixed(2);
-  document.getElementById("baseoil2").innerText = base2.toFixed(2);
-  document.getElementById("baseoil3").innerText = base3.toFixed(2);
-
-  let time = new Date().toLocaleTimeString();
-
-  labels.push(time);
-  brentHist.push(brent);
-  usdHist.push(usd);
-  mezclaHist.push(mezcla);
-  g1.push(base1);
-  g2.push(base2);
-  g3.push(base3);
-
-  if (labels.length > 20) {
-    labels.shift();
-    brentHist.shift();
-    usdHist.shift();
-    mezclaHist.shift();
-    g1.shift();
-    g2.shift();
-    g3.shift();
-  }
-
-  chart.update();
+// 🔴 ALERTA PARPADEO
+function startFlashing() {
+  if (flashInterval) return;
+  flashInterval = setInterval(() => {
+    document.title = (document.title === tituloNormal)
+      ? "🔴 ALERTA COSTOS"
+      : tituloNormal;
+  }, 700);
 }
 
+function stopFlashing() {
+  if (flashInterval) {
+    clearInterval(flashInterval);
+    flashInterval = null;
+  }
+  document.title = tituloNormal;
+}
+
+// 📊 ANÁLISIS
+function analizar() {
+  if (g1.length < 5) {
+    document.getElementById("senal").innerText = "Analizando mercado...";
+    return;
+  }
+
+  let cambioBrent = brentHist.at(-1) - brentHist.at(-5);
+  let cambioUsd = usdHist.at(-1) - usdHist.at(-5);
+  let cambioG1 = g1.at(-1) - g1.at(-5);
+
+  let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioG1 * 0.4);
+
+  let señal = document.getElementById("senal");
+
+  if (score > 3) {
+    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
+    señal.style.color = "red";
+    señal.style.background = "rgba(255,0,0,0.2)";
+    startFlashing();
+  } 
+  else if (score > 1) {
+    señal.innerText = "🟠 PRESIÓN ALCISTA";
+    señal.style.color = "orange";
+    señal.style.background = "rgba(255,165,0,0.15)";
+    stopFlashing();
+  } 
+  else if (score < -1.5) {
+    señal.innerText = "🟢 BAJA DE COSTOS";
+    señal.style.color = "lime";
+    señal.style.background = "rgba(0,255,0,0.15)";
+    stopFlashing();
+  } 
+  else {
+    señal.innerText = "🟡 MERCADO ESTABLE";
+    señal.style.color = "yellow";
+    señal.style.background = "rgba(255,255,0,0.1)";
+    stopFlashing();
+  }
+}
+
+// 📡 DATOS
+async function obtenerDatos() {
+  try {
+    let res = await fetch("https://petro-usd.vercel.app/api/brent");
+    let data = await res.json();
+    let brent = parseFloat(data.brent) || 105;
+
+    let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
+    let usdData = await usdRes.json();
+    let usd = usdData.rates.MXN;
+
+    let mezcla = brent - 7;
+    let base1 = (mezcla * 0.8) * (usd / 17.5);
+    let base2 = base1 * 1.22;
+    let base3 = base1 * 1.48;
+
+    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
+    document.getElementById("usd").innerText = usd.toFixed(2);
+    document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
+    document.getElementById("baseoil1").innerText = base1.toFixed(2);
+    document.getElementById("baseoil2").innerText = base2.toFixed(2);
+    document.getElementById("baseoil3").innerText = base3.toFixed(2);
+
+    let time = new Date().toLocaleTimeString();
+
+    labels.push(time);
+    brentHist.push(brent);
+    usdHist.push(usd);
+    mezclaHist.push(mezcla);
+    g1.push(base1);
+    g2.push(base2);
+    g3.push(base3);
+
+    if (labels.length > 20) {
+      labels.shift();
+      brentHist.shift();
+      usdHist.shift();
+      mezclaHist.shift();
+      g1.shift();
+      g2.shift();
+      g3.shift();
+    }
+
+    analizar();
+    chart.update();
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+// 📈 GRÁFICA
 let chart = new Chart(document.getElementById("grafica"), {
   type: 'line',
   data: {
@@ -199,15 +272,17 @@ let chart = new Chart(document.getElementById("grafica"), {
       legend: {
         labels: {
           color: "white",
-          font: { size: 18 }
+          font: { size: 16 }
         }
       }
     }
   }
 });
 
+// AUTO REFRESH
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
+
 </script>
 
 </body>
