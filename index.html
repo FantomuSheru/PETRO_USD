@@ -68,7 +68,7 @@ body {
   min-width: 250px;
 }
 
-/* BARÓMETRO */
+/* 🔥 BARÓMETRO NUEVO */
 .barometro {
   display: flex;
   align-items: center;
@@ -81,12 +81,25 @@ body {
   width: fit-content;
 }
 
-.luz {
+/* GOTA */
+.gota {
   width: 30px;
-  height: 30px;
+  height: 40px;
+  background: gray;
+  border-radius: 50% 50% 50% 50%;
+  position: relative;
+  transform: rotate(45deg);
+}
+
+.gota::after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 40px;
+  background: inherit;
   border-radius: 50%;
-  background: #ccc;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+  top: -15px;
+  left: 0;
 }
 
 #textoBarometro {
@@ -149,9 +162,9 @@ canvas {
   </div>
 </div>
 
-<!-- 🔥 BARÓMETRO NUEVO -->
+<!-- 🔥 BARÓMETRO -->
 <div class="barometro">
-  <div id="luz" class="luz"></div>
+  <div id="gota" class="gota"></div>
   <div id="textoBarometro">Analizando riesgo...</div>
 </div>
 
@@ -193,30 +206,30 @@ function stopFlashing() {
   document.title = tituloNormal;
 }
 
-// 🟢🟡🟠🔴 BARÓMETRO
+// 🟢🟡🟠🔴 BARÓMETRO (VERSIÓN LIMPIA)
 function actualizarBarometro(brent, usd) {
-  let luz = document.getElementById("luz");
+  let gota = document.getElementById("gota");
   let texto = document.getElementById("textoBarometro");
 
   if (brent > 110 || usd > 21) {
-    luz.style.background = "red";
-    texto.innerText = "🔴 Subida con alta probabilidad";
+    gota.style.background = "red";
+    texto.innerText = "Subida con alta probabilidad";
   }
   else if (brent > 95 || usd > 19.5) {
-    luz.style.background = "orange";
-    texto.innerText = "🟠 Alerta de posibles subidas";
+    gota.style.background = "orange";
+    texto.innerText = "Alerta de posibles subidas";
   }
   else if (brent > 80 || usd > 18) {
-    luz.style.background = "gold";
-    texto.innerText = "🟡 Hay que vigilar mercado";
+    gota.style.background = "gold";
+    texto.innerText = "Hay que vigilar mercado";
   }
   else {
-    luz.style.background = "green";
-    texto.innerText = "🟢 Mercado normal";
+    gota.style.background = "green";
+    texto.innerText = "Mercado normal";
   }
 }
 
-// 📊 ANÁLISIS ORIGINAL (NO TOCADO)
+// 📊 ANÁLISIS ORIGINAL
 function analizar() {
   if (g1.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
@@ -279,7 +292,6 @@ async function obtenerDatos() {
     document.getElementById("baseoil2").innerText = base2.toFixed(2);
     document.getElementById("baseoil3").innerText = base3.toFixed(2);
 
-    // 👉 ACTUALIZA BARÓMETRO
     actualizarBarometro(brent, usd);
 
     let time = new Date().toLocaleTimeString();
@@ -323,16 +335,6 @@ let chart = new Chart(document.getElementById("grafica"), {
       { label: 'Group III', data: g3, borderColor: '#339966' },
       { label: 'USD', data: usdHist, borderColor: '#47C2D0' }
     ]
-  },
-  options: {
-    plugins: {
-      legend: {
-        labels: {
-          color: "#6E6F72",
-          font: { size: 14 }
-        }
-      }
-    }
   }
 });
 
