@@ -4,16 +4,14 @@
 <meta charset="UTF-8">
 <title>Monitor Commodities</title>
 
-<!-- ✅ FAVICON -->
 <link rel="icon" type="image/png" href="logo.png">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #000000;
-  color: white;
+  background: #ffffff;                 /* 🔥 FONDO BLANCO */
+  color: #6E6F72;                      /* 🔥 COLOR GENERAL */
   text-align: center;
   margin: 0;
   padding: 20px;
@@ -27,13 +25,6 @@ body {
   margin-bottom: 10px;
 }
 
-@media (max-width: 600px) {
-  .logo {
-    width: 55%;
-    max-width: 130px;
-  }
-}
-
 /* CONTENEDOR */
 .container {
   display: flex;
@@ -44,22 +35,24 @@ body {
 
 /* TARJETAS */
 .card {
-  background: #1e293b;
+  background: #f5f5f5;                 /* gris claro para contraste */
   margin: 10px;
   padding: 14px;
   border-radius: 12px;
   width: 200px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .card h3 {
   font-size: 15px;
   margin-bottom: 6px;
+  color: #6E6F72;
 }
 
 .value {
   font-size: 24px;
   font-weight: bold;
+  color: #6E6F72;
 }
 
 /* ALERTA */
@@ -79,10 +72,11 @@ canvas {
   margin: 20px auto;
 }
 
-/* COLORES */
-.group1 { color: #00ffcc; }
-.group2 { color: #ffaa00; }
-.group3 { color: #ff66ff; }
+/* 🔥 COLORES GROUPS (texto) */
+.group1 { color: #F7941E; }
+.group2 { color: #9B9B9B; }
+.group3 { color: #339966; }
+
 </style>
 </head>
 
@@ -143,7 +137,7 @@ let labels = [];
 let flashInterval = null;
 const tituloNormal = "Monitor Commodities";
 
-// 🔴 ALERTA PARPADEO
+// ALERTA PARPADEO
 function startFlashing() {
   if (flashInterval) return;
   flashInterval = setInterval(() => {
@@ -161,7 +155,7 @@ function stopFlashing() {
   document.title = tituloNormal;
 }
 
-// 📊 ANÁLISIS
+// ANÁLISIS
 function analizar() {
   if (g1.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
@@ -179,30 +173,30 @@ function analizar() {
   if (score > 3) {
     señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
     señal.style.color = "red";
-    señal.style.background = "rgba(255,0,0,0.2)";
+    señal.style.background = "#ffe5e5";
     startFlashing();
   } 
   else if (score > 1) {
     señal.innerText = "🟠 PRESIÓN ALCISTA";
     señal.style.color = "orange";
-    señal.style.background = "rgba(255,165,0,0.15)";
+    señal.style.background = "#fff3e0";
     stopFlashing();
   } 
   else if (score < -1.5) {
     señal.innerText = "🟢 BAJA DE COSTOS";
-    señal.style.color = "lime";
-    señal.style.background = "rgba(0,255,0,0.15)";
+    señal.style.color = "green";
+    señal.style.background = "#e8f5e9";
     stopFlashing();
   } 
   else {
     señal.innerText = "🟡 MERCADO ESTABLE";
-    señal.style.color = "yellow";
-    señal.style.background = "rgba(255,255,0,0.1)";
+    señal.style.color = "#6E6F72";
+    señal.style.background = "#f5f5f5";
     stopFlashing();
   }
 }
 
-// 📡 DATOS
+// DATOS
 async function obtenerDatos() {
   try {
     let res = await fetch("https://petro-usd.vercel.app/api/brent");
@@ -253,26 +247,26 @@ async function obtenerDatos() {
   }
 }
 
-// 📈 GRÁFICA
+// GRÁFICA
 let chart = new Chart(document.getElementById("grafica"), {
   type: 'line',
   data: {
     labels,
     datasets: [
-      { label: 'Brent', data: brentHist, borderColor: 'yellow' },
-      { label: 'Mezcla', data: mezclaHist, borderColor: 'orange' },
-      { label: 'G1', data: g1, borderColor: '#00ffcc' },
-      { label: 'G2', data: g2, borderColor: '#ffaa00' },
-      { label: 'G3', data: g3, borderColor: '#ff66ff' },
-      { label: 'USD', data: usdHist, borderColor: 'white' }
+      { label: 'Brent', data: brentHist, borderColor: '#E8BD14' },
+      { label: 'Mezcla', data: mezclaHist, borderColor: '#F17379' },
+      { label: 'Group I', data: g1, borderColor: '#F7941E' },
+      { label: 'Group II', data: g2, borderColor: '#9B9B9B' },
+      { label: 'Group III', data: g3, borderColor: '#339966' },
+      { label: 'USD', data: usdHist, borderColor: '#47C2D0' }
     ]
   },
   options: {
     plugins: {
       legend: {
         labels: {
-          color: "white",
-          font: { size: 16 }
+          color: "#6E6F72",
+          font: { size: 14 }
         }
       }
     }
