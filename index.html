@@ -4,254 +4,231 @@
 <meta charset="UTF-8">
 <title>Monitor Commodities</title>
 
-<!-- ✅ FAVICON -->
 <link rel="icon" type="image/jpeg" href="LOGOGIPA.jpeg">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background: #ffffff;
   color: #6E6F72;
   text-align: center;
-  margin: 0;
-  padding: 20px;
 }
 
-/* LOGO */
 .logo {
-  max-width: 160px;
-  width: 35%;
-  height: auto;
+  max-width: 150px;
   margin-bottom: 10px;
 }
 
-@media (max-width: 600px) {
-  .logo {
-    width: 55%;
-    max-width: 130px;
-  }
-}
-
-/* CONTENEDOR */
 .container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 13px;
 }
 
-/* TARJETAS */
 .card {
   background: #f5f5f5;
-  margin: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  width: 200px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.card h3 {
-  font-size: 15px;
-  margin-bottom: 6px;
+  margin: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  width: 180px;
 }
 
 .value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
 }
 
-/* ALERTA */
 #senal {
-  font-size: 24px;
-  margin: 20px auto;
-  padding: 12px;
+  font-size: 22px;
+  margin: 15px;
+  padding: 10px;
   border-radius: 10px;
-  min-width: 250px;
 }
 
-/* GRÁFICA */
 canvas {
-  width: 95% !important;
-  max-width: 1200px;
-  height: 380px !important;
+  max-width: 1000px;
   margin: 20px auto;
 }
-
-/* COLORES GROUPS */
-.group1 { color: #F7941E; }
-.group2 { color: #9B9B9B; }
-.group3 { color: #339966; }
-
 </style>
 </head>
 
 <body>
 
 <img src="LOGOGIPA.jpeg" class="logo">
-
-<h2>🛢️ Monitor Commodities - lubricantes</h2>
-
-<div class="container">
-  <div class="card">
-    <h3>Brent</h3>
-    <div id="brent" class="value">...</div>
-  </div>
-  <div class="card">
-    <h3>USD/MXN</h3>
-    <div id="usd" class="value">...</div>
-  </div>
-  <div class="card">
-    <h3>Mezcla MX</h3>
-    <div id="mezcla" class="value">...</div>
-  </div>
-</div>
+<h2>🛢️ Monitor Commodities</h2>
 
 <div class="container">
-  <div class="card">
-    <h3>Group I</h3>
-    <div id="baseoil1" class="value group1">...</div>
-  </div>
-  <div class="card">
-    <h3>Group II</h3>
-    <div id="baseoil2" class="value group2">...</div>
-  </div>
-  <div class="card">
-    <h3>Group III</h3>
-    <div id="baseoil3" class="value group3">...</div>
-  </div>
+  <div class="card"><h3>Brent</h3><div id="brent" class="value">...</div></div>
+  <div class="card"><h3>USD/MXN</h3><div id="usd" class="value">...</div></div>
+  <div class="card"><h3>Mezcla</h3><div id="mezcla" class="value">...</div></div>
+  <div class="card"><h3>Índice</h3><div id="indice" class="value">...</div></div>
 </div>
 
-<div id="senal">Cargando datos...</div>
+<div id="senal">Cargando...</div>
+
+<!-- 🔥 BARÓMETRO -->
+<canvas id="gauge" width="300" height="160"></canvas>
 
 <canvas id="grafica"></canvas>
 
 <script>
-// CONFIG
-const CONFIG = {
-  descuentoMezcla: 7,
-  rendimientoGroup1: 0.80,
-  factorConversion: 17.5,
-  diferencialGroup2: 1.22,
-  diferencialGroup3: 1.48
-};
 
-let brentHist = [], usdHist = [], mezclaHist = [];
-let g1 = [], g2 = [], g3 = [];
-let labels = [];
+let brentHist = [], usdHist = [], mezclaHist = [], g1 = [], labels = [];
+let indiceAnimado = 0;
 
-let flashInterval = null;
-const tituloNormal = "Monitor Commodities";
+// 🎯 BARÓMETRO
+function dibujarGauge(valor) {
+  const canvas = document.getElementById("gauge");
+  const ctx = canvas.getContext("2d");
 
-// 🔴 PARPADEO
-function startFlashing() {
-  if (flashInterval) return;
-  flashInterval = setInterval(() => {
-    document.title = (document.title === tituloNormal)
-      ? "🔴 ALERTA COSTOS"
-      : tituloNormal;
-  }, 700);
+  let max = 4;
+  let porcentaje = Math.min(valor / max, 1);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  let cx = canvas.width / 2;
+  let cy = canvas.height;
+  let r = 120;
+
+  // base
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.lineWidth = 15;
+  ctx.strokeStyle = "#eee";
+  ctx.stroke();
+
+  // color
+  let color = "green";
+  if (valor > 1) color = "orange";
+  if (valor > 2) color = "red";
+
+  // progreso
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, Math.PI + Math.PI * porcentaje);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 15;
+  ctx.stroke();
+
+  // aguja
+  let angle = Math.PI + Math.PI * porcentaje;
+  let x = cx + (r - 10) * Math.cos(angle);
+  let y = cy + (r - 10) * Math.sin(angle);
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // texto
+  ctx.font = "16px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(valor.toFixed(2), cx, cy - 20);
 }
 
-function stopFlashing() {
-  if (flashInterval) {
-    clearInterval(flashInterval);
-    flashInterval = null;
+// animación
+function animarGauge(nuevo) {
+  function animar() {
+    indiceAnimado += (nuevo - indiceAnimado) * 0.05;
+    dibujarGauge(indiceAnimado);
+
+    if (Math.abs(indiceAnimado - nuevo) > 0.01) {
+      requestAnimationFrame(animar);
+    }
   }
-  document.title = tituloNormal;
+  animar();
 }
 
 // 📊 ANÁLISIS
 function analizar() {
-  if (g1.length < 5) {
-    document.getElementById("senal").innerText = "Analizando mercado...";
-    return;
+
+  if (g1.length < 5) return;
+
+  let b0 = brentHist.at(-5);
+  let b1 = brentHist.at(-1);
+
+  let u0 = usdHist.at(-5);
+  let u1 = usdHist.at(-1);
+
+  let g0 = g1.at(-5);
+  let g1v = g1.at(-1);
+
+  let cambioBrent = ((b1 - b0) / b0) * 100;
+  let cambioUsd = ((u1 - u0) / u0) * 100;
+  let cambioG1 = ((g1v - g0) / g0) * 100;
+
+  let indice = (cambioBrent * 0.5) + (cambioUsd * 0.8) + (cambioG1 * 0.3);
+
+  // ajustes críticos
+  if (b1 > 95) indice += 0.5;
+  if (u1 > 17.8) indice += 0.5;
+  if (b1 > 100 && u1 > 18) indice += 1;
+
+  document.getElementById("indice").innerText = indice.toFixed(2);
+
+  // semáforo
+  let s = document.getElementById("senal");
+
+  if (indice > 3) {
+    s.innerText = "🔴 SUBIDA FUERTE";
+    s.style.color = "red";
+  } else if (indice > 2) {
+    s.innerText = "🟠 PRESIÓN ALTA";
+    s.style.color = "orange";
+  } else if (indice > 1) {
+    s.innerText = "🟡 PRESIÓN MODERADA";
+    s.style.color = "#b59f00";
+  } else {
+    s.innerText = "🟢 ESTABLE";
+    s.style.color = "green";
   }
 
-  let cambioBrent = brentHist.at(-1) - brentHist.at(-5);
-  let cambioUsd = usdHist.at(-1) - usdHist.at(-5);
-  let cambioG1 = g1.at(-1) - g1.at(-5);
-
-  let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioG1 * 0.4);
-
-  let señal = document.getElementById("senal");
-
-  if (score > 3) {
-    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
-    señal.style.color = "red";
-    señal.style.background = "#ffe5e5";
-    startFlashing();
-  } 
-  else if (score > 1) {
-    señal.innerText = "🟠 PRESIÓN ALCISTA";
-    señal.style.color = "orange";
-    señal.style.background = "#fff3e0";
-    stopFlashing();
-  } 
-  else if (score < -1.5) {
-    señal.innerText = "🟢 BAJA DE COSTOS";
-    señal.style.color = "green";
-    señal.style.background = "#e8f5e9";
-    stopFlashing();
-  } 
-  else {
-    señal.innerText = "🟡 MERCADO ESTABLE";
-    señal.style.color = "#6E6F72";
-    señal.style.background = "#f5f5f5";
-    stopFlashing();
-  }
+  animarGauge(indice);
 }
 
 // 📡 DATOS
 async function obtenerDatos() {
+
+  let brent = 105;
+  let usd = 17.2;
+
   try {
-    let res = await fetch("https://petro-usd.vercel.app/api/brent");
-    let data = await res.json();
-    let brent = parseFloat(data.brent) || 105;
+    let r = await fetch("https://petro-usd.vercel.app/api/brent");
+    let d = await r.json();
+    brent = parseFloat(d.brent);
+  } catch {}
 
-    let usdRes = await fetch("https://open.er-api.com/v6/latest/USD");
-    let usdData = await usdRes.json();
-    let usd = usdData.rates.MXN;
+  try {
+    let r2 = await fetch("https://open.er-api.com/v6/latest/USD");
+    let d2 = await r2.json();
+    usd = d2.rates.MXN;
+  } catch {}
 
-    let mezcla = brent - 7;
-    let base1 = (mezcla * 0.8) * (usd / 17.5);
-    let base2 = base1 * 1.22;
-    let base3 = base1 * 1.48;
+  let mezcla = brent - 7;
+  let base1 = (mezcla * 0.8) * (usd / 17.5);
 
-    document.getElementById("brent").innerText = "$" + brent.toFixed(2);
-    document.getElementById("usd").innerText = usd.toFixed(2);
-    document.getElementById("mezcla").innerText = "$" + mezcla.toFixed(2);
-    document.getElementById("baseoil1").innerText = base1.toFixed(2);
-    document.getElementById("baseoil2").innerText = base2.toFixed(2);
-    document.getElementById("baseoil3").innerText = base3.toFixed(2);
+  document.getElementById("brent").innerText = "$" + brent.toFixed(2);
+  document.getElementById("usd").innerText = usd.toFixed(2);
+  document.getElementById("mezcla").innerText = mezcla.toFixed(2);
 
-    let time = new Date().toLocaleTimeString();
+  labels.push(new Date().toLocaleTimeString());
+  brentHist.push(brent);
+  usdHist.push(usd);
+  mezclaHist.push(mezcla);
+  g1.push(base1);
 
-    labels.push(time);
-    brentHist.push(brent);
-    usdHist.push(usd);
-    mezclaHist.push(mezcla);
-    g1.push(base1);
-    g2.push(base2);
-    g3.push(base3);
-
-    if (labels.length > 20) {
-      labels.shift();
-      brentHist.shift();
-      usdHist.shift();
-      mezclaHist.shift();
-      g1.shift();
-      g2.shift();
-      g3.shift();
-    }
-
-    analizar();
-    chart.update();
-
-  } catch (error) {
-    console.error("Error:", error);
+  if (labels.length > 20) {
+    labels.shift();
+    brentHist.shift();
+    usdHist.shift();
+    mezclaHist.shift();
+    g1.shift();
   }
+
+  analizar();
+  chart.update();
 }
 
 // 📈 GRÁFICA
@@ -261,22 +238,9 @@ let chart = new Chart(document.getElementById("grafica"), {
     labels,
     datasets: [
       { label: 'Brent', data: brentHist, borderColor: '#E8BD14' },
-      { label: 'Mezcla', data: mezclaHist, borderColor: '#F17379' },
-      { label: 'Group I', data: g1, borderColor: '#F7941E' },
-      { label: 'Group II', data: g2, borderColor: '#9B9B9B' },
-      { label: 'Group III', data: g3, borderColor: '#339966' },
-      { label: 'USD', data: usdHist, borderColor: '#47C2D0' }
+      { label: 'USD', data: usdHist, borderColor: '#47C2D0' },
+      { label: 'Group I', data: g1, borderColor: '#F7941E' }
     ]
-  },
-  options: {
-    plugins: {
-      legend: {
-        labels: {
-          color: "#6E6F72",
-          font: { size: 14 }
-        }
-      }
-    }
   }
 });
 
