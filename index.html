@@ -68,7 +68,7 @@ body {
   min-width: 250px;
 }
 
-/* 🔥 BARÓMETRO NUEVO */
+/* BARÓMETRO */
 .barometro {
   display: flex;
   align-items: center;
@@ -79,27 +79,6 @@ body {
   border-radius: 12px;
   background: #f5f5f5;
   width: fit-content;
-}
-
-/* GOTA */
-.gota {
-  width: 30px;
-  height: 40px;
-  background: gray;
-  border-radius: 50% 50% 50% 50%;
-  position: relative;
-  transform: rotate(45deg);
-}
-
-.gota::after {
-  content: '';
-  position: absolute;
-  width: 30px;
-  height: 40px;
-  background: inherit;
-  border-radius: 50%;
-  top: -15px;
-  left: 0;
 }
 
 #textoBarometro {
@@ -162,9 +141,11 @@ canvas {
   </div>
 </div>
 
-<!-- 🔥 BARÓMETRO -->
+<!-- 🔥 BARÓMETRO PRO -->
 <div class="barometro">
-  <div id="gota" class="gota"></div>
+  <svg width="40" height="50" viewBox="0 0 64 80">
+    <path id="gotaPath" d="M32 2C32 2 8 34 8 52a24 24 0 0 0 48 0C56 34 32 2 32 2z" fill="gray"/>
+  </svg>
   <div id="textoBarometro">Analizando riesgo...</div>
 </div>
 
@@ -206,25 +187,25 @@ function stopFlashing() {
   document.title = tituloNormal;
 }
 
-// 🟢🟡🟠🔴 BARÓMETRO (VERSIÓN LIMPIA)
+// 🟢🟡🟠🔴 BARÓMETRO
 function actualizarBarometro(brent, usd) {
-  let gota = document.getElementById("gota");
+  let gota = document.getElementById("gotaPath");
   let texto = document.getElementById("textoBarometro");
 
   if (brent > 110 || usd > 21) {
-    gota.style.background = "red";
+    gota.setAttribute("fill", "red");
     texto.innerText = "Subida con alta probabilidad";
   }
   else if (brent > 95 || usd > 19.5) {
-    gota.style.background = "orange";
+    gota.setAttribute("fill", "orange");
     texto.innerText = "Alerta de posibles subidas";
   }
   else if (brent > 80 || usd > 18) {
-    gota.style.background = "gold";
+    gota.setAttribute("fill", "gold");
     texto.innerText = "Hay que vigilar mercado";
   }
   else {
-    gota.style.background = "green";
+    gota.setAttribute("fill", "green");
     texto.innerText = "Mercado normal";
   }
 }
