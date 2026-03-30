@@ -44,7 +44,7 @@ body {
   font-weight: bold;
 }
 
-/* 🔥 NUEVO CONTENEDOR */
+/* CONTENEDOR ALERTA + GAUGE */
 #senalContainer {
   display: flex;
   align-items: center;
@@ -52,7 +52,6 @@ body {
   gap: 10px;
 }
 
-/* ALERTA */
 #senal {
   font-size: 24px;
   padding: 12px;
@@ -66,7 +65,6 @@ body {
   height: 70px !important;
 }
 
-/* GRÁFICA */
 canvas {
   width: 95% !important;
   max-width: 1200px;
@@ -116,7 +114,7 @@ canvas {
   </div>
 </div>
 
-<!-- 🔥 AQUÍ VA EL BARÓMETRO -->
+<!-- 🔥 ALERTA + BARÓMETRO -->
 <div id="senalContainer">
   <div id="senal">Cargando datos...</div>
   <canvas id="miniGauge" width="120" height="70"></canvas>
@@ -126,27 +124,48 @@ canvas {
 
 <script>
 
-// CONFIG
-const CONFIG = {
-  descuentoMezcla: 7,
-  rendimientoGroup1: 0.80,
-  factorConversion: 17.5,
-  diferencialGroup2: 1.22,
-  diferencialGroup3: 1.48
-};
-
+// HISTÓRICOS
 let brentHist = [], usdHist = [], mezclaHist = [];
 let g1 = [], g2 = [], g3 = [];
 let labels = [];
 
 let indiceAnimado = 0;
 
-// 🧭 MINI BARÓMETRO
+// 🧠 🔥 NUEVO ALGORITMO (NIVELES REALES)
+function calcularNivel(brent, usd) {
+
+  let puntos = 0;
+
+  // Brent
+  if (brent > 100) puntos += 2;
+  else if (brent > 95) puntos += 1;
+  else if (brent < 80) puntos -= 1;
+
+  // USD
+  if (usd >= 18) puntos += 2;
+  else if (usd > 17.5) puntos += 1;
+  else if (usd < 17) puntos -= 1;
+
+  // combinación crítica
+  if (brent > 100 && usd >= 18) puntos += 2;
+
+  return puntos;
+}
+
+// 🎨 COLOR + TEXTO
+function obtenerNivel(puntos) {
+  if (puntos <= 0) return { color: "green", texto: "🟢 NORMAL" };
+  if (puntos <= 2) return { color: "#b59f00", texto: "🟡 VIGILAR" };
+  if (puntos <= 4) return { color: "orange", texto: "🟠 ALERTA" };
+  return { color: "red", texto: "🔴 CRÍTICO" };
+}
+
+// 🧭 MINI GAUGE
 function dibujarMiniGauge(valor) {
   const canvas = document.getElementById("miniGauge");
   const ctx = canvas.getContext("2d");
 
-  let max = 4;
+  let max = 6;
   let p = Math.min(valor / max, 1);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -162,8 +181,8 @@ function dibujarMiniGauge(valor) {
   ctx.stroke();
 
   let color = "green";
-  if (valor > 1) color = "orange";
-  if (valor > 2) color = "red";
+  if (valor > 2) color = "orange";
+  if (valor > 4) color = "red";
 
   ctx.beginPath();
   ctx.arc(cx, cy, r, Math.PI, Math.PI + Math.PI * p);
@@ -196,37 +215,23 @@ function animarMiniGauge(valor) {
   animar();
 }
 
-// 📊 ANÁLISIS (TU LÓGICA ORIGINAL)
+// 📊 ANÁLISIS NUEVO
 function analizar() {
-  if (g1.length < 5) return;
+  if (brentHist.length < 1) return;
 
-  let cambioBrent = brentHist.at(-1) - brentHist.at(-5);
-  let cambioUsd = usdHist.at(-1) - usdHist.at(-5);
-  let cambioG1 = g1.at(-1) - g1.at(-5);
+  let brent = brentHist.at(-1);
+  let usd = usdHist.at(-1);
 
-  let score = (cambioBrent * 0.6) + (cambioUsd * 1.8) + (cambioG1 * 0.4);
+  let puntos = calcularNivel(brent, usd);
+  let nivel = obtenerNivel(puntos);
 
   let señal = document.getElementById("senal");
 
-  if (score > 3) {
-    señal.innerText = "🔴 SUBIDA FUERTE DE COSTOS";
-    señal.style.color = "red";
-  } 
-  else if (score > 1) {
-    señal.innerText = "🟠 PRESIÓN ALCISTA";
-    señal.style.color = "orange";
-  } 
-  else if (score < -1.5) {
-    señal.innerText = "🟢 BAJA DE COSTOS";
-    señal.style.color = "green";
-  } 
-  else {
-    señal.innerText = "🟡 MERCADO ESTABLE";
-    señal.style.color = "#6E6F72";
-  }
+  señal.innerText = nivel.texto;
+  señal.style.color = nivel.color;
 
-  // 🔥 AQUÍ SE ACTIVA EL BARÓMETRO
-  animarMiniGauge(score);
+  // 🔥 BARÓMETRO
+  animarMiniGauge(puntos);
 }
 
 // 📡 DATOS
