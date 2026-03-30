@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <title>Monitor Commodities</title>
 
-<link rel="icon" type="image/png" href="logo.png">
+<!-- ✅ FAVICON -->
+<link rel="icon" type="image/jpeg" href="LOGOGIPA.jpeg">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #ffffff;                 /* 🔥 FONDO BLANCO */
-  color: #6E6F72;                      /* 🔥 COLOR GENERAL */
+  background: #ffffff;
+  color: #6E6F72;
   text-align: center;
   margin: 0;
   padding: 20px;
@@ -25,6 +27,13 @@ body {
   margin-bottom: 10px;
 }
 
+@media (max-width: 600px) {
+  .logo {
+    width: 55%;
+    max-width: 130px;
+  }
+}
+
 /* CONTENEDOR */
 .container {
   display: flex;
@@ -35,7 +44,7 @@ body {
 
 /* TARJETAS */
 .card {
-  background: #f5f5f5;                 /* gris claro para contraste */
+  background: #f5f5f5;
   margin: 10px;
   padding: 14px;
   border-radius: 12px;
@@ -46,13 +55,11 @@ body {
 .card h3 {
   font-size: 15px;
   margin-bottom: 6px;
-  color: #6E6F72;
 }
 
 .value {
   font-size: 24px;
   font-weight: bold;
-  color: #6E6F72;
 }
 
 /* ALERTA */
@@ -72,7 +79,7 @@ canvas {
   margin: 20px auto;
 }
 
-/* 🔥 COLORES GROUPS (texto) */
+/* COLORES GROUPS */
 .group1 { color: #F7941E; }
 .group2 { color: #9B9B9B; }
 .group3 { color: #339966; }
@@ -82,7 +89,7 @@ canvas {
 
 <body>
 
-<img src="logo.jpeg" class="logo">
+<img src="LOGOGIPA.jpeg" class="logo">
 
 <h2>🛢️ Monitor Commodities - lubricantes</h2>
 
@@ -137,7 +144,7 @@ let labels = [];
 let flashInterval = null;
 const tituloNormal = "Monitor Commodities";
 
-// ALERTA PARPADEO
+// 🔴 PARPADEO
 function startFlashing() {
   if (flashInterval) return;
   flashInterval = setInterval(() => {
@@ -155,7 +162,7 @@ function stopFlashing() {
   document.title = tituloNormal;
 }
 
-// ANÁLISIS
+// 📊 ANÁLISIS
 function analizar() {
   if (g1.length < 5) {
     document.getElementById("senal").innerText = "Analizando mercado...";
@@ -196,7 +203,7 @@ function analizar() {
   }
 }
 
-// DATOS
+// 📡 DATOS
 async function obtenerDatos() {
   try {
     let res = await fetch("https://petro-usd.vercel.app/api/brent");
@@ -247,7 +254,7 @@ async function obtenerDatos() {
   }
 }
 
-// GRÁFICA
+// 📈 GRÁFICA
 let chart = new Chart(document.getElementById("grafica"), {
   type: 'line',
   data: {
@@ -273,7 +280,6 @@ let chart = new Chart(document.getElementById("grafica"), {
   }
 });
 
-// AUTO REFRESH
 setInterval(obtenerDatos, 10000);
 obtenerDatos();
 
